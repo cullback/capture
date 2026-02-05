@@ -1,60 +1,39 @@
 {
+  description = "Capture websites as markdown";
+
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-25.11";
+    flake-utils.url = "github:numtide/flake-utils";
   };
 
   outputs =
-    { self, nixpkgs }:
-    let
-      supportedSystems = [
-        "x86_64-linux"
-        "aarch64-linux"
-        "x86_64-darwin"
-        "aarch64-darwin"
-      ];
-      forAllSystems = nixpkgs.lib.genAttrs supportedSystems;
-    in
     {
-      packages = forAllSystems (
-        system:
-        let
-          pkgs = nixpkgs.legacyPackages.${system};
-        in
-        {
-          # TODO: Update pname, version, and description
-          default = pkgs.rustPlatform.buildRustPackage {
-            pname = "capture";
-            version = "0.1.0";
-            src = ./.;
-            cargoLock.lockFile = ./Cargo.lock;
-            meta = {
-              description = "A Rust application";
-              mainProgram = "capture";
-            };
-          };
-        }
-      );
-
-      devShells = forAllSystems (
-        system:
-        let
-          pkgs = nixpkgs.legacyPackages.${system};
-        in
-        {
-          default = pkgs.mkShell {
-            packages = with pkgs; [
-              cargo
-              rustc
-              clippy
-              rust-analyzer
-              rustfmt
-              dprint
-              fd
-              ripgrep
-              nixfmt-rfc-style
-            ];
-          };
-        }
-      );
-    };
+      self,
+      nixpkgs,
+      flake-utils,
+    }:
+    flake-utils.lib.eachDefaultSystem (
+      system:
+      let
+        pkgs = nixpkgs.legacyPackages.${system};
+      in
+      {
+        devShells.default = pkgs.mkShell {
+          packages = with pkgs; [
+            python312
+            uv
+            ruff
+            pyright
+            dprint
+            fd
+            ripgrep
+            nixfmt-rfc-style
+            # capture dependencies
+            single-file-cli
+            pandoc
+            chromium
+          ];
+        };
+      }
+    );
 }
