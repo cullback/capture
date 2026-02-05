@@ -1,0 +1,22 @@
+{
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "The title of the page/article"
+    },
+    "publish_date": {
+      "type": ["string", "null"],
+      "description": "The publish or last updated date in YYYY-MM-DD format"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "A list of 2-5 relevant topic tags"
+    }
+  },
+  "required": ["title", "publish_date", "tags"],
+  "additionalProperties": false
+}
