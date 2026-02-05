@@ -1,6 +1,7 @@
 """External tool wrappers for capture pipeline."""
 
 import json
+import re
 import subprocess
 import urllib.parse
 import urllib.request
@@ -107,8 +108,25 @@ def call_reducto(pdf_path: Path, api_key: str) -> str:
     return "\n\n".join(chunk.get("content", "") for chunk in chunks)
 
 
+def strip_css_data_uris(html_path: Path) -> None:
+    """Strip CSS background-image data URIs from HTML.
+
+    Pandoc's --extract-media only handles <img> elements, not CSS background
+    images. Large data URIs in CSS (e.g., LQIP placeholders) would otherwise
+    end up inline in the markdown output, potentially exceeding LLM token limits.
+    """
+    html = html_path.read_text(errors="ignore")
+    # Replace background-image:url(data:...) with background-image:none
+    cleaned = re.sub(
+        r"background-image:\s*url\(data:[^)]+\)", "background-image:none", html
+    )
+    if cleaned != html:
+        html_path.write_text(cleaned)
+
+
 def call_pandoc(html_path: Path, output_dir: Path) -> str:
     """Convert HTML to markdown with Pandoc, extracting images."""
+    strip_css_data_uris(html_path)
     print("Converting with Pandoc...")
     cmd = [
         "pandoc",
