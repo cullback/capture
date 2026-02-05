@@ -3,4 +3,6 @@ name = "capture"
 version = "0.1.0"
 description = "Capture websites as markdown"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+  "pyyaml>=6.0.3",
+]

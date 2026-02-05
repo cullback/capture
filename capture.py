@@ -203,7 +203,29 @@ def slugify(text: str) -> str:
     return text.strip("-")
 
 
-def add_frontmatter(markdown: str, metadata: dict, domain: str, url: str) -> str:
+def strip_frontmatter(markdown: str) -> tuple[dict, str]:
+    """Remove YAML frontmatter and return (frontmatter_dict, content)."""
+    import yaml
+
+    if not markdown.startswith("---"):
+        return {}, markdown
+
+    parts = markdown.split("---", 2)
+    if len(parts) < 3:
+        return {}, markdown
+
+    frontmatter = yaml.safe_load(parts[1]) or {}
+    content = parts[2].lstrip("\n")
+    return frontmatter, content
+
+
+def add_frontmatter(
+    markdown: str,
+    metadata: dict,
+    domain: str,
+    url: str,
+    capture_date: str | None = None,
+) -> str:
     """Add YAML frontmatter to markdown."""
     from datetime import date
 
@@ -212,7 +234,7 @@ def add_frontmatter(markdown: str, metadata: dict, domain: str, url: str) -> str
         f'title: "{metadata["title"]}"',
         f"domain: {domain}",
         f"url: {url}",
-        f"capture_date: {date.today()}",
+        f"capture_date: {capture_date or date.today()}",
     ]
     if metadata.get("publish_date"):
         lines.append(f"publish_date: {metadata['publish_date']}")
@@ -226,13 +248,42 @@ def add_frontmatter(markdown: str, metadata: dict, domain: str, url: str) -> str
     return "\n".join(lines) + markdown
 
 
+def retag(folder_path: Path) -> None:
+    """Re-extract metadata and update frontmatter for an existing capture."""
+    md_path = folder_path / "page.md"
+    if not md_path.exists():
+        sys.exit(f"Error: {md_path} not found")
+
+    # Read and strip existing frontmatter
+    original = md_path.read_text()
+    old_frontmatter, content = strip_frontmatter(original)
+
+    if not old_frontmatter:
+        sys.exit("Error: No frontmatter found in file")
+
+    # Re-extract metadata
+    metadata = extract_metadata(content)
+
+    # Rebuild with preserved fields
+    final_md = add_frontmatter(
+        content,
+        metadata,
+        domain=old_frontmatter.get("domain", "unknown"),
+        url=old_frontmatter.get("url", ""),
+        capture_date=str(old_frontmatter.get("capture_date", "")),
+    )
+    final_md = format_markdown(final_md)
+    md_path.write_text(final_md)
+
+    print(f"Updated {md_path}")
+
+
 def main():
     parser = argparse.ArgumentParser(description="Capture websites as markdown")
-    parser.add_argument("url", help="URL to capture")
+    parser.add_argument("url", nargs="?", help="URL to capture")
     parser.add_argument(
         "-o",
         "--output",
-        required=True,
         help="Output directory (folder will be created inside)",
     )
     parser.add_argument("-b", "--browser", help="Browser executable path")
@@ -241,7 +292,23 @@ def main():
         action="store_true",
         help="Skip Reducto + LLM merge, use pandoc only",
     )
+    parser.add_argument(
+        "--retag",
+        metavar="FOLDER",
+        help="Re-extract tags for an existing capture folder",
+    )
     args = parser.parse_args()
+
+    # Handle retag mode
+    if args.retag:
+        retag(Path(args.retag))
+        return
+
+    # Normal capture mode requires url and output
+    if not args.url:
+        parser.error("url is required for capture mode")
+    if not args.output:
+        parser.error("-o/--output is required for capture mode")
 
     browser = args.browser or find_browser()
     if not browser:
