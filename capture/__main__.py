@@ -81,19 +81,20 @@ def capture_pdf(pdf_path: Path, output_base: Path) -> None:
         # 2. Extract metadata
         metadata = extract_metadata(content_md)
 
-        # 3. Add frontmatter and format
-        final_md = add_frontmatter(content_md, metadata, domain=source, url="")
-        final_md = format_markdown(final_md)
-        (work_dir / "page.md").write_text(final_md)
-
-        # 4. Copy original PDF
-        shutil.copy2(pdf_path, work_dir / "page.pdf")
-
-        # 5. Move to final location
+        # 3. Determine final folder name
         title_slug = slugify(metadata["title"])
         date_str = metadata.get("publish_date") or "unknown-date"
         folder_name = f"{source} - {date_str} - {title_slug}"
 
+        # 4. Add frontmatter and format
+        final_md = add_frontmatter(content_md, metadata, domain=source, url="")
+        final_md = format_markdown(final_md)
+        (work_dir / f"{folder_name}.md").write_text(final_md)
+
+        # 5. Copy original PDF
+        shutil.copy2(pdf_path, work_dir / f"{folder_name}.pdf")
+
+        # 6. Move to final location
         final_dir = output_base / folder_name
         if final_dir.exists():
             shutil.rmtree(final_dir)
@@ -121,7 +122,6 @@ def capture_url(
         work_dir.mkdir()
 
         html_path = work_dir / "page.html"
-        md_path = work_dir / "page.md"
 
         # 1. Capture HTML
         capture_html(url, html_path, browser)
@@ -155,15 +155,16 @@ def capture_url(
         # 2. Extract metadata
         metadata = extract_metadata(content_md)
 
-        # 3. Add frontmatter and format
-        final_md = add_frontmatter(content_md, metadata, domain, url)
-        final_md = format_markdown(final_md)
-        md_path.write_text(final_md)
-
-        # 4. Determine final folder name
+        # 3. Determine final folder name
         title_slug = slugify(metadata["title"])
         date_str = metadata.get("publish_date") or "unknown-date"
         folder_name = f"{domain} - {date_str} - {title_slug}"
+
+        # 4. Add frontmatter, format, and rename files to match folder
+        final_md = add_frontmatter(content_md, metadata, domain, url)
+        final_md = format_markdown(final_md)
+        (work_dir / f"{folder_name}.md").write_text(final_md)
+        html_path.rename(work_dir / f"{folder_name}.html")
 
         # 5. Move to final location
         output_base.mkdir(parents=True, exist_ok=True)
@@ -178,9 +179,10 @@ def capture_url(
 
 def retag(folder_path: Path) -> None:
     """Re-extract metadata and update frontmatter for an existing capture."""
-    md_path = folder_path / "page.md"
-    if not md_path.exists():
-        sys.exit(f"Error: {md_path} not found")
+    md_files = list(folder_path.glob("*.md"))
+    if not md_files:
+        sys.exit(f"Error: no .md file found in {folder_path}")
+    md_path = md_files[0]
 
     # Read and strip existing frontmatter
     original = md_path.read_text()
