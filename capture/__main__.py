@@ -13,10 +13,11 @@ from capture.convert import (
     call_reducto,
     capture_html,
     find_browser,
+    find_hn_thread,
     format_markdown,
     html_to_pdf,
 )
-from capture.llm import extract_metadata, merge_with_llm
+from capture.llm import cleanup_markdown, extract_metadata
 from capture.markdown import add_frontmatter, slugify, strip_frontmatter
 
 
@@ -74,9 +75,10 @@ def capture_pdf(pdf_path: Path, output_base: Path) -> None:
     work_dir.mkdir(parents=True, exist_ok=True)
 
     try:
-        # 1. Parse PDF with Reducto
+        # 1. Parse PDF with Reducto and clean up
         reducto_md = call_reducto(pdf_path, reducto_key)
-        content_md = format_markdown(reducto_md)
+        content_md = cleanup_markdown(reducto_md)
+        content_md = format_markdown(content_md)
 
         # 2. Extract metadata
         metadata = extract_metadata(content_md)
@@ -147,7 +149,7 @@ def capture_url(
             pandoc_md = call_pandoc(html_path, work_dir)
 
             # Merge with LLM
-            merged_md = merge_with_llm(reducto_md, pandoc_md)
+            merged_md = cleanup_markdown(reducto_md, pandoc_md)
 
             # Format with dprint
             content_md = format_markdown(merged_md)
@@ -160,13 +162,16 @@ def capture_url(
         date_str = metadata.get("publish_date") or "unknown-date"
         folder_name = f"{domain} - {date_str} - {title_slug}"
 
-        # 4. Add frontmatter, format, and rename files to match folder
-        final_md = add_frontmatter(content_md, metadata, domain, url)
+        # 4. Look up HN thread
+        hn_url = find_hn_thread(url)
+
+        # 5. Add frontmatter, format, and rename files to match folder
+        final_md = add_frontmatter(content_md, metadata, domain, url, hackernews=hn_url)
         final_md = format_markdown(final_md)
         (work_dir / f"{folder_name}.md").write_text(final_md)
         html_path.rename(work_dir / f"{folder_name}.html")
 
-        # 5. Move to final location
+        # 6. Move to final location
         output_base.mkdir(parents=True, exist_ok=True)
         final_dir = output_base / folder_name
 
@@ -194,13 +199,20 @@ def retag(folder_path: Path) -> None:
     # Re-extract metadata
     metadata = extract_metadata(content)
 
+    # Look up HN thread, preserving existing value on failure
+    source_url = old_frontmatter.get("url", "")
+    hn_url = find_hn_thread(source_url) if source_url else None
+    if not hn_url:
+        hn_url = old_frontmatter.get("hackernews")
+
     # Rebuild with preserved fields
     final_md = add_frontmatter(
         content,
         metadata,
         domain=old_frontmatter.get("domain", "unknown"),
-        url=old_frontmatter.get("url", ""),
+        url=source_url,
         capture_date=str(old_frontmatter.get("capture_date", "")),
+        hackernews=hn_url,
     )
     final_md = format_markdown(final_md)
     md_path.write_text(final_md)

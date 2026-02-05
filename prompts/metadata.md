@@ -16,13 +16,13 @@ Format: lowercase kebab-case. Prefer existing tags over inventing new ones.
 - Programming: functional-programming, rust, python, c, nixos, macos
 - Practices: performance, security, reversing, debugging, devtools, database, sqlite
 - Math: math, probability, numerical-analysis, graph-theory, floating-point
-- Finance: quant, market-microstructure, market-manipulation, prediction-markets, forecasting
+- Finance: quant, market-microstructure, market-manipulation, prediction-markets, forecasting, finance, kelly-criterion
 - Epistemics: rationalism, bayesian
 - AI: llm
 - Games: chess, puzzle, board-games
 - Policy: policy, climate-change
-- Life: employment, parenting, taxes, startup
-- Other: unicode, git
+- Life: employment, parenting, taxes, startup, productivity, conversation — interesting non-technical topics about philosophy, culture, society, behavior, or beliefs that make good discussion material
+- Other: unicode, git, humor
 
 ### Content type tags
 

@@ -13,15 +13,28 @@ def load_prompt(name: str) -> str:
     return (PROMPTS_DIR / f"{name}.md").read_text()
 
 
-def merge_with_llm(reducto_md: str, pandoc_md: str) -> str:
-    """Use llm.py to merge the two markdown versions."""
-    print("Merging with LLM...")
+def cleanup_markdown(markdown: str, pandoc_md: str | None = None) -> str:
+    """Clean up markdown with LLM, optionally merging two versions."""
+    rules = load_prompt("cleanup")
 
-    template = load_prompt("merge")
-    prompt = template.format(reducto_md=reducto_md, pandoc_md=pandoc_md)
+    if pandoc_md:
+        print("Merging with LLM...")
+        merge_intro = load_prompt("merge")
+        prompt = (
+            f"{merge_intro}\n{rules}\n"
+            f"VERSION A (from Reducto - has accurate math equations and tables):\n{markdown}\n\n"
+            f"VERSION B (from Pandoc - has image references and hyperlinks):\n{pandoc_md}"
+        )
+    else:
+        print("Cleaning up with LLM...")
+        prompt = (
+            f"You are cleaning up raw Markdown into polished, idiomatic Markdown.\n\n"
+            f"{rules}\n{markdown}"
+        )
 
     result = subprocess.run(
-        ["python", str(LLM_SCRIPT), prompt],
+        ["python", str(LLM_SCRIPT)],
+        input=prompt,
         capture_output=True,
         text=True,
         check=True,
@@ -38,7 +51,8 @@ def extract_metadata(markdown: str) -> dict:
     schema_path = PROMPTS_DIR / "metadata_schema.json"
 
     result = subprocess.run(
-        ["python", str(LLM_SCRIPT), "--schema", str(schema_path), prompt],
+        ["python", str(LLM_SCRIPT), "--schema", str(schema_path)],
+        input=prompt,
         capture_output=True,
         text=True,
         check=True,

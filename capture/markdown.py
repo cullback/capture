@@ -38,6 +38,7 @@ def add_frontmatter(
     domain: str,
     url: str,
     capture_date: str | None = None,
+    hackernews: str | None = None,
 ) -> str:
     """Add YAML frontmatter to markdown."""
     lines = [
@@ -45,8 +46,10 @@ def add_frontmatter(
         f'title: "{metadata["title"]}"',
         f"domain: {domain}",
         f"url: {url}",
-        f"capture_date: {capture_date or date.today()}",
     ]
+    if hackernews:
+        lines.append(f"hackernews: {hackernews}")
+    lines.append(f"capture_date: {capture_date or date.today()}")
     if metadata.get("publish_date"):
         lines.append(f"publish_date: {metadata['publish_date']}")
     if metadata.get("tags"):

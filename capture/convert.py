@@ -2,6 +2,7 @@
 
 import json
 import subprocess
+import urllib.parse
 import urllib.request
 from pathlib import Path
 
@@ -126,6 +127,29 @@ def call_pandoc(html_path: Path, output_dir: Path) -> str:
     return result.stdout
 
 
+def find_hn_thread(url: str) -> str | None:
+    """Find the HN thread with the most comments for a given URL."""
+    try:
+        query = urllib.parse.urlencode(
+            {
+                "query": url,
+                "restrictSearchableAttributes": "url",
+                "tags": "story",
+            }
+        )
+        api_url = f"https://hn.algolia.com/api/v1/search?{query}"
+        req = urllib.request.Request(api_url)
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            data = json.loads(resp.read().decode())
+        hits = data.get("hits", [])
+        if not hits:
+            return None
+        best = max(hits, key=lambda h: h.get("num_comments", 0))
+        return f"https://news.ycombinator.com/item?id={best['objectID']}"
+    except Exception:
+        return None
+
+
 def format_markdown(content: str) -> str:
     """Format markdown using dprint."""
     print("Formatting with dprint...")
@@ -134,6 +158,9 @@ def format_markdown(content: str) -> str:
         input=content,
         capture_output=True,
         text=True,
-        check=True,
+        check=False,
     )
+    if result.returncode != 0:
+        print(f"Warning: dprint failed (exit {result.returncode}), skipping formatting")
+        return content
     return result.stdout
