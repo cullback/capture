@@ -290,8 +290,9 @@ def main():
         # 2. Extract metadata
         metadata = extract_metadata(content_md)
 
-        # 3. Add frontmatter
+        # 3. Add frontmatter and format
         final_md = add_frontmatter(content_md, metadata, domain, args.url)
+        final_md = format_markdown(final_md)
         md_path.write_text(final_md)
 
         # 4. Determine final folder name
