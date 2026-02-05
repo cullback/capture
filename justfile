@@ -25,4 +25,4 @@ check:
 
 # Run the capture tool
 run *ARGS:
-    uv run python capture.py {{ ARGS }}
+    uv run python -m capture {{ ARGS }}

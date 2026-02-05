@@ -1,0 +1,139 @@
+"""External tool wrappers for capture pipeline."""
+
+import json
+import subprocess
+import urllib.request
+from pathlib import Path
+
+BROWSER_CANDIDATES = [
+    "chrome",
+    "chromium",
+    "google-chrome",
+    "google-chrome-stable",
+    "chromium-browser",
+]
+
+
+def find_browser() -> str | None:
+    """Find an available browser."""
+    for candidate in BROWSER_CANDIDATES:
+        result = subprocess.run(["which", candidate], capture_output=True, check=False)
+        if result.returncode == 0:
+            return candidate
+    return None
+
+
+def capture_html(url: str, output: Path, browser: str) -> None:
+    """Capture webpage as HTML using single-file."""
+    print(f"Capturing {url}...")
+    subprocess.run(
+        ["single-file", "--browser-executable-path", browser, url, str(output)],
+        check=True,
+    )
+
+
+def html_to_pdf(html_path: Path, pdf_path: Path, browser: str) -> None:
+    """Convert HTML to PDF using headless Chrome."""
+    print("Converting to PDF...")
+    subprocess.run(
+        [
+            browser,
+            "--headless",
+            "--disable-gpu",
+            "--no-sandbox",
+            f"--print-to-pdf={pdf_path}",
+            str(html_path),
+        ],
+        check=True,
+        capture_output=True,
+    )
+
+
+def call_reducto(pdf_path: Path, api_key: str) -> str:
+    """Call Reducto API to parse PDF and return markdown."""
+    print("Parsing with Reducto...")
+
+    with open(pdf_path, "rb") as f:
+        pdf_data = f.read()
+
+    boundary = "----WebKitFormBoundary7MA4YWxkTrZu0gW"
+    body = (
+        (
+            f"--{boundary}\r\n"
+            f'Content-Disposition: form-data; name="file"; filename="{pdf_path.name}"\r\n'
+            f"Content-Type: application/pdf\r\n\r\n"
+        ).encode()
+        + pdf_data
+        + f"\r\n--{boundary}--\r\n".encode()
+    )
+
+    upload_req = urllib.request.Request(
+        "https://platform.reducto.ai/upload",
+        data=body,
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": f"multipart/form-data; boundary={boundary}",
+        },
+        method="POST",
+    )
+
+    with urllib.request.urlopen(upload_req, timeout=120) as resp:
+        upload_result = json.loads(resp.read().decode())
+
+    file_url = (
+        upload_result.get("file_id")
+        or upload_result.get("file_url")
+        or upload_result.get("url")
+    )
+    if not file_url:
+        raise ValueError(f"No file_id in upload response: {upload_result}")
+
+    parse_data = json.dumps({"document_url": file_url}).encode()
+    parse_req = urllib.request.Request(
+        "https://platform.reducto.ai/parse",
+        data=parse_data,
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+        },
+        method="POST",
+    )
+
+    with urllib.request.urlopen(parse_req, timeout=300) as resp:
+        result = json.loads(resp.read().decode())
+
+    chunks = result.get("result", {}).get("chunks", [])
+    return "\n\n".join(chunk.get("content", "") for chunk in chunks)
+
+
+def call_pandoc(html_path: Path, output_dir: Path) -> str:
+    """Convert HTML to markdown with Pandoc, extracting images."""
+    print("Converting with Pandoc...")
+    cmd = [
+        "pandoc",
+        "-f",
+        "html",
+        "-t",
+        "markdown",
+        "--extract-media",
+        "images",
+        str(html_path.absolute()),
+    ]
+
+    result = subprocess.run(
+        cmd, capture_output=True, text=True, check=True, cwd=output_dir
+    )
+    return result.stdout
+
+
+def format_markdown(content: str) -> str:
+    """Format markdown using dprint."""
+    print("Formatting with dprint...")
+    result = subprocess.run(
+        ["dprint", "fmt", "--stdin", "md"],
+        input=content,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    return result.stdout
