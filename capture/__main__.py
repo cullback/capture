@@ -2,6 +2,7 @@
 
 import argparse
 import os
+import re
 import shutil
 import sys
 import tempfile
@@ -23,7 +24,7 @@ from capture.markdown import add_frontmatter, slugify, strip_frontmatter
 
 def main():
     parser = argparse.ArgumentParser(description="Capture websites as markdown")
-    parser.add_argument("input", nargs="?", help="URL or PDF file to capture")
+    parser.add_argument("input", nargs="?", help="URL, PDF, or HTML file to capture")
     parser.add_argument(
         "-o",
         "--output",
@@ -53,12 +54,15 @@ def main():
     if not args.output:
         parser.error("-o/--output is required for capture mode")
 
-    # Detect PDF vs URL
+    # Detect PDF, HTML, or URL
     input_path = Path(args.input)
     is_pdf = input_path.suffix.lower() == ".pdf" and input_path.exists()
+    is_html = input_path.suffix.lower() in (".html", ".htm") and input_path.exists()
 
     if is_pdf:
         capture_pdf(input_path, Path(args.output))
+    elif is_html:
+        capture_html_file(input_path, Path(args.output), args.browser, args.no_reducto)
     else:
         capture_url(args.input, Path(args.output), args.browser, args.no_reducto)
 
@@ -107,6 +111,87 @@ def capture_pdf(pdf_path: Path, output_base: Path) -> None:
         if work_dir.exists():
             shutil.rmtree(work_dir)
         raise
+
+
+def extract_singlefile_url(html_path: Path) -> str | None:
+    """Extract the original URL from a SingleFile HTML comment."""
+    head = html_path.read_text(errors="ignore")[:2000]
+    match = re.search(r"url:\s*(https?://\S+)", head)
+    if not match:
+        return None
+    url = match.group(1).split("?")[0].rstrip()
+    return url
+
+
+def capture_html_file(
+    html_path: Path, output_base: Path, browser_arg: str | None, no_reducto: bool
+) -> None:
+    """Capture a local HTML file as markdown."""
+    # Try to extract original URL from SingleFile metadata
+    source_url = extract_singlefile_url(html_path) or ""
+    if source_url:
+        domain = (
+            source_url.removeprefix("https://").removeprefix("http://").split("/")[0]
+        )
+    else:
+        domain = html_path.stem
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        work_dir = Path(tmpdir) / "capture"
+        work_dir.mkdir()
+
+        # Copy HTML into work dir
+        work_html = work_dir / "page.html"
+        shutil.copy2(html_path, work_html)
+
+        if no_reducto:
+            pandoc_md = call_pandoc(work_html, work_dir)
+            content_md = format_markdown(pandoc_md)
+        else:
+            reducto_key = os.environ.get("REDUCTO_API_KEY")
+            if not reducto_key:
+                sys.exit("Error: REDUCTO_API_KEY environment variable not set")
+
+            browser = browser_arg or find_browser()
+            if not browser:
+                sys.exit(f"No browser found. Tried: {', '.join(BROWSER_CANDIDATES)}")
+
+            pdf_path = Path(tmpdir) / "page.pdf"
+            html_to_pdf(work_html, pdf_path, browser)
+
+            reducto_md = call_reducto(pdf_path, reducto_key)
+            pandoc_md = call_pandoc(work_html, work_dir)
+            merged_md = cleanup_markdown(reducto_md, pandoc_md)
+            content_md = format_markdown(merged_md)
+
+        # Extract metadata
+        metadata = extract_metadata(content_md)
+
+        # Determine final folder name
+        title_slug = slugify(metadata["title"])
+        date_str = metadata.get("publish_date") or "unknown-date"
+        folder_name = f"{domain} - {date_str} - {title_slug}"
+
+        # Look up HN thread
+        hn_url = find_hn_thread(source_url) if source_url else None
+
+        # Add frontmatter, format, and rename files
+        final_md = add_frontmatter(
+            content_md, metadata, domain=domain, url=source_url, hackernews=hn_url
+        )
+        final_md = format_markdown(final_md)
+        (work_dir / f"{folder_name}.md").write_text(final_md)
+        work_html.rename(work_dir / f"{folder_name}.html")
+
+        # Move to final location
+        output_base.mkdir(parents=True, exist_ok=True)
+        final_dir = output_base / folder_name
+
+        if final_dir.exists():
+            shutil.rmtree(final_dir)
+        shutil.move(str(work_dir), str(final_dir))
+
+    print(f"Saved to {final_dir}/")
 
 
 def capture_url(

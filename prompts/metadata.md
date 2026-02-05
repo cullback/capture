@@ -8,27 +8,26 @@ Extract:
 
 ## Tag Guidelines
 
-Format: lowercase kebab-case. Prefer existing tags over inventing new ones.
+Format: lowercase kebab-case. Prefer existing tags, but invent a specific tag if the article's main subject isn't covered — a precise new tag is better than a vague existing one.
 
 ### Topic tags
 
-- CS: algorithms, data-structures, compilers, graphics, hardware, solver, data-visualization, distributed, networking, operating-systems, plt, encryption, formal-methods
-- Programming: functional-programming, rust, python, c, nixos, macos
-- Practices: performance, security, reversing, debugging, devtools, database, sqlite
-- Math: math, probability, numerical-analysis, graph-theory, floating-point
-- Finance: quant, market-microstructure, market-manipulation, prediction-markets, forecasting, finance, kelly-criterion
-- Epistemics: rationalism, bayesian
-- AI: llm
-- Games: chess, puzzle, board-games
-- Policy: policy, climate-change
-- Life: employment, parenting, taxes, startup, productivity, conversation — interesting non-technical topics about philosophy, culture, society, behavior, or beliefs that make good discussion material
-- Other: unicode, git, humor
+- CS: algorithms, data-structures, compilers, graphics, complexity-theory, type-theory, concurrency, formal-methods, encryption, solver, data-visualization, floating-point, unicode, parsing, compression, information-theory, automata
+- Systems: operating-systems, distributed, networking, hardware, assembly, instruction-sets, nixos, macos, self-hosting, linux, containers, virtualization
+- Programming: functional-programming, oop, design-patterns, code-golf, rust, python, c, html, plt, javascript, cpp, metaprogramming, regex
+- Practices: performance, security, reversing, debugging, devtools, testing, observability, database, sqlite, git, ci-cd, profiling, logging
+- Math: math, probability, statistics, linear-algebra, optimization, numerical-analysis, graph-theory, combinatorics, set-theory
+- Finance: finance, quant, market-microstructure, market-manipulation, prediction-markets, forecasting, kelly-criterion, derivatives, risk-management, options, backtesting, portfolio-theory
+- AI: llm, reinforcement-learning, interpretability, agents, computer-vision, nlp, fine-tuning
+- Epistemics: rationalism, bayesian, decision-theory, cognitive-biases, game-theory, calibration
+- Games: chess, puzzle, board-games, catan, poker, go
+- Policy: policy, climate-change, copyright, privacy, regulation
+- Life: employment, parenting, taxes, startup, productivity, conversation, philosophy, psychology, writing, humor, spaced-repetition, health, negotiation, reading, education
 
 ### Content type tags
 
 - implementation — article describes building a concrete thing
 - walkthrough — step-by-step explanation
-- analysis — deep dive into behavior/internals
 
 Markdown:
 
