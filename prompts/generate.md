@@ -7,7 +7,7 @@ You are converting a webpage PDF into clean, well-structured Markdown. You have 
 
 Output ONLY valid Markdown starting with YAML frontmatter in this exact format:
 
-```yaml
+```markdown
 ---
 title: "The Article Title"
 publish_date: YYYY-MM-DD
