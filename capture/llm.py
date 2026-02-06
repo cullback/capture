@@ -37,8 +37,10 @@ def cleanup_markdown(markdown: str, pandoc_md: str | None = None) -> str:
         input=prompt,
         capture_output=True,
         text=True,
-        check=True,
     )
+    if result.returncode != 0:
+        print(f"LLM error (exit {result.returncode}): {result.stderr}", flush=True)
+        raise subprocess.CalledProcessError(result.returncode, result.args)
     return result.stdout
 
 
@@ -55,6 +57,8 @@ def extract_metadata(markdown: str) -> dict:
         input=prompt,
         capture_output=True,
         text=True,
-        check=True,
     )
+    if result.returncode != 0:
+        print(f"LLM error (exit {result.returncode}): {result.stderr}", flush=True)
+        raise subprocess.CalledProcessError(result.returncode, result.args)
     return json.loads(result.stdout)

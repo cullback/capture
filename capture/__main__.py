@@ -31,6 +31,7 @@ def main():
         help="Output directory (folder will be created inside)",
     )
     parser.add_argument("-b", "--browser", help="Browser executable path")
+    parser.add_argument("-d", "--domain", help="Override domain for PDF/HTML captures")
     parser.add_argument(
         "--retag",
         metavar="FOLDER",
@@ -55,22 +56,22 @@ def main():
     is_html = input_path.suffix.lower() in (".html", ".htm") and input_path.exists()
 
     if is_pdf:
-        capture_pdf(input_path, Path(args.output))
+        capture_pdf(input_path, Path(args.output), args.domain)
         input_path.unlink()
     elif is_html:
-        capture_html_file(input_path, Path(args.output), args.browser)
+        capture_html_file(input_path, Path(args.output), args.browser, args.domain)
         input_path.unlink()
     else:
         capture_url(args.input, Path(args.output), args.browser)
 
 
-def capture_pdf(pdf_path: Path, output_base: Path) -> None:
+def capture_pdf(pdf_path: Path, output_base: Path, domain_override: str | None) -> None:
     """Capture a local PDF file as markdown via Reducto."""
     reducto_key = os.environ.get("REDUCTO_API_KEY")
     if not reducto_key:
         sys.exit("Error: REDUCTO_API_KEY environment variable not set")
 
-    source = pdf_path.stem
+    source = domain_override or pdf_path.stem
 
     work_dir = output_base / "tmp_capture"
     work_dir.mkdir(parents=True, exist_ok=True)
@@ -121,12 +122,17 @@ def extract_singlefile_url(html_path: Path) -> str | None:
 
 
 def capture_html_file(
-    html_path: Path, output_base: Path, browser_arg: str | None
+    html_path: Path,
+    output_base: Path,
+    browser_arg: str | None,
+    domain_override: str | None,
 ) -> None:
     """Capture a local HTML file as markdown."""
     # Try to extract original URL from SingleFile metadata
     source_url = extract_singlefile_url(html_path) or ""
-    if source_url:
+    if domain_override:
+        domain = domain_override
+    elif source_url:
         domain = (
             source_url.removeprefix("https://").removeprefix("http://").split("/")[0]
         )
