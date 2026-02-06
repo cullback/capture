@@ -51,63 +51,6 @@ def html_to_pdf(html_path: Path, pdf_path: Path, browser: str) -> None:
     )
 
 
-def call_reducto(pdf_path: Path, api_key: str) -> str:
-    """Call Reducto API to parse PDF and return markdown."""
-    print("Parsing with Reducto...")
-
-    with open(pdf_path, "rb") as f:
-        pdf_data = f.read()
-
-    boundary = "----WebKitFormBoundary7MA4YWxkTrZu0gW"
-    body = (
-        (
-            f"--{boundary}\r\n"
-            f'Content-Disposition: form-data; name="file"; filename="{pdf_path.name}"\r\n'
-            f"Content-Type: application/pdf\r\n\r\n"
-        ).encode()
-        + pdf_data
-        + f"\r\n--{boundary}--\r\n".encode()
-    )
-
-    upload_req = urllib.request.Request(
-        "https://platform.reducto.ai/upload",
-        data=body,
-        headers={
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": f"multipart/form-data; boundary={boundary}",
-        },
-        method="POST",
-    )
-
-    with urllib.request.urlopen(upload_req, timeout=120) as resp:
-        upload_result = json.loads(resp.read().decode())
-
-    file_url = (
-        upload_result.get("file_id")
-        or upload_result.get("file_url")
-        or upload_result.get("url")
-    )
-    if not file_url:
-        raise ValueError(f"No file_id in upload response: {upload_result}")
-
-    parse_data = json.dumps({"document_url": file_url}).encode()
-    parse_req = urllib.request.Request(
-        "https://platform.reducto.ai/parse",
-        data=parse_data,
-        headers={
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json",
-        },
-        method="POST",
-    )
-
-    with urllib.request.urlopen(parse_req, timeout=300) as resp:
-        result = json.loads(resp.read().decode())
-
-    chunks = result.get("result", {}).get("chunks", [])
-    return "\n\n".join(chunk.get("content", "") for chunk in chunks)
-
-
 def strip_css_data_uris(html_path: Path) -> None:
     """Strip CSS data URIs from HTML (fonts, background images, etc).
 

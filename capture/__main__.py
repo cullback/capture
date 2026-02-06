@@ -1,7 +1,6 @@
 """CLI entrypoint and orchestration for capture pipeline."""
 
 import argparse
-import os
 import re
 import shutil
 import sys
@@ -11,15 +10,14 @@ from pathlib import Path
 from capture.convert import (
     BROWSER_CANDIDATES,
     call_pandoc,
-    call_reducto,
     capture_html,
     find_browser,
     find_hn_thread,
     format_markdown,
     html_to_pdf,
 )
-from capture.llm import cleanup_markdown, extract_metadata
-from capture.markdown import add_frontmatter, slugify, strip_frontmatter
+from capture.llm import generate_markdown
+from capture.markdown import slugify, strip_frontmatter
 
 
 def main():
@@ -32,19 +30,9 @@ def main():
     )
     parser.add_argument("-b", "--browser", help="Browser executable path")
     parser.add_argument("-d", "--domain", help="Override domain for PDF/HTML captures")
-    parser.add_argument(
-        "--retag",
-        metavar="FOLDER",
-        help="Re-extract tags for an existing capture folder",
-    )
     args = parser.parse_args()
 
-    # Handle retag mode
-    if args.retag:
-        retag(Path(args.retag))
-        return
-
-    # Normal capture mode requires input and output
+    # Capture mode requires input and output
     if not args.input:
         parser.error("input is required for capture mode")
     if not args.output:
@@ -66,10 +54,8 @@ def main():
 
 
 def capture_pdf(pdf_path: Path, output_base: Path, domain_override: str | None) -> None:
-    """Capture a local PDF file as markdown via Reducto."""
-    reducto_key = os.environ.get("REDUCTO_API_KEY")
-    if not reducto_key:
-        sys.exit("Error: REDUCTO_API_KEY environment variable not set")
+    """Capture a local PDF file as markdown via vision LLM."""
+    from datetime import date
 
     source = (
         domain_override.removeprefix("https://").removeprefix("http://").split("/")[0]
@@ -81,28 +67,22 @@ def capture_pdf(pdf_path: Path, output_base: Path, domain_override: str | None) 
     work_dir.mkdir(parents=True, exist_ok=True)
 
     try:
-        # 1. Parse PDF with Reducto and clean up
-        reducto_md = call_reducto(pdf_path, reducto_key)
-        content_md = cleanup_markdown(reducto_md)
-        content_md = format_markdown(content_md)
+        # 1. Generate markdown with LLM (no pandoc for direct PDF)
+        capture_date = str(date.today())
+        raw_md = generate_markdown(pdf_path, None, source, "", capture_date)
+        final_md = format_markdown(raw_md)
 
-        # 2. Extract metadata
-        metadata = extract_metadata(content_md)
-
-        # 3. Determine final folder name
-        title_slug = slugify(metadata["title"])
-        date_str = metadata.get("publish_date") or "unknown-date"
+        # 2. Extract metadata from generated frontmatter for folder naming
+        frontmatter, _ = strip_frontmatter(final_md)
+        title_slug = slugify(frontmatter["title"])
+        date_str = frontmatter.get("publish_date") or "unknown-date"
         folder_name = f"{source} - {date_str} - {title_slug}"
 
-        # 4. Add frontmatter and format
-        final_md = add_frontmatter(content_md, metadata, domain=source, url="")
-        final_md = format_markdown(final_md)
+        # 3. Save markdown and copy original PDF
         (work_dir / f"{folder_name}.md").write_text(final_md)
-
-        # 5. Copy original PDF
         shutil.copy2(pdf_path, work_dir / f"{folder_name}.pdf")
 
-        # 6. Move to final location
+        # 4. Move to final location
         final_dir = output_base / folder_name
         if final_dir.exists():
             shutil.rmtree(final_dir)
@@ -132,6 +112,8 @@ def capture_html_file(
     domain_override: str | None,
 ) -> None:
     """Capture a local HTML file as markdown."""
+    from datetime import date
+
     # Try to extract original URL from SingleFile metadata
     source_url = extract_singlefile_url(html_path) or ""
     if domain_override:
@@ -147,10 +129,6 @@ def capture_html_file(
     else:
         domain = html_path.stem
 
-    reducto_key = os.environ.get("REDUCTO_API_KEY")
-    if not reducto_key:
-        sys.exit("Error: REDUCTO_API_KEY environment variable not set")
-
     browser = browser_arg or find_browser()
     if not browser:
         sys.exit(f"No browser found. Tried: {', '.join(BROWSER_CANDIDATES)}")
@@ -163,30 +141,28 @@ def capture_html_file(
         work_html = work_dir / "page.html"
         shutil.copy2(html_path, work_html)
 
+        # Convert to PDF and get pandoc markdown
         pdf_path = Path(tmpdir) / "page.pdf"
         html_to_pdf(work_html, pdf_path, browser)
-
-        reducto_md = call_reducto(pdf_path, reducto_key)
         pandoc_md = call_pandoc(work_html, work_dir)
-        merged_md = cleanup_markdown(reducto_md, pandoc_md)
-        content_md = format_markdown(merged_md)
-
-        # Extract metadata
-        metadata = extract_metadata(content_md)
-
-        # Determine final folder name
-        title_slug = slugify(metadata["title"])
-        date_str = metadata.get("publish_date") or "unknown-date"
-        folder_name = f"{domain} - {date_str} - {title_slug}"
 
         # Look up HN thread
         hn_url = find_hn_thread(source_url) if source_url else None
 
-        # Add frontmatter, format, and rename files
-        final_md = add_frontmatter(
-            content_md, metadata, domain=domain, url=source_url, hackernews=hn_url
+        # Generate markdown with LLM
+        capture_date = str(date.today())
+        raw_md = generate_markdown(
+            pdf_path, pandoc_md, domain, source_url, capture_date, hn_url
         )
-        final_md = format_markdown(final_md)
+        final_md = format_markdown(raw_md)
+
+        # Extract metadata from generated frontmatter for folder naming
+        frontmatter, _ = strip_frontmatter(final_md)
+        title_slug = slugify(frontmatter["title"])
+        date_str = frontmatter.get("publish_date") or "unknown-date"
+        folder_name = f"{domain} - {date_str} - {title_slug}"
+
+        # Save markdown and rename HTML
         (work_dir / f"{folder_name}.md").write_text(final_md)
         work_html.rename(work_dir / f"{folder_name}.html")
 
@@ -203,13 +179,11 @@ def capture_html_file(
 
 def capture_url(url: str, output_base: Path, browser_arg: str | None) -> None:
     """Capture a URL as markdown."""
+    from datetime import date
+
     browser = browser_arg or find_browser()
     if not browser:
         sys.exit(f"No browser found. Tried: {', '.join(BROWSER_CANDIDATES)}")
-
-    reducto_key = os.environ.get("REDUCTO_API_KEY")
-    if not reducto_key:
-        sys.exit("Error: REDUCTO_API_KEY environment variable not set")
 
     domain = url.removeprefix("https://").removeprefix("http://").split("/")[0]
 
@@ -222,40 +196,32 @@ def capture_url(url: str, output_base: Path, browser_arg: str | None) -> None:
         # 1. Capture HTML
         capture_html(url, html_path, browser)
 
-        # Convert HTML to PDF (in temp)
+        # 2. Convert to PDF and get pandoc markdown
         pdf_path = Path(tmpdir) / "page.pdf"
         html_to_pdf(html_path, pdf_path, browser)
-
-        # Get markdown from Reducto (math/tables)
-        reducto_md = call_reducto(pdf_path, reducto_key)
-
-        # Get markdown from Pandoc (images/links)
         pandoc_md = call_pandoc(html_path, work_dir)
 
-        # Merge with LLM
-        merged_md = cleanup_markdown(reducto_md, pandoc_md)
-
-        # Format with dprint
-        content_md = format_markdown(merged_md)
-
-        # 2. Extract metadata
-        metadata = extract_metadata(content_md)
-
-        # 3. Determine final folder name
-        title_slug = slugify(metadata["title"])
-        date_str = metadata.get("publish_date") or "unknown-date"
-        folder_name = f"{domain} - {date_str} - {title_slug}"
-
-        # 4. Look up HN thread
+        # 3. Look up HN thread
         hn_url = find_hn_thread(url)
 
-        # 5. Add frontmatter, format, and rename files to match folder
-        final_md = add_frontmatter(content_md, metadata, domain, url, hackernews=hn_url)
-        final_md = format_markdown(final_md)
+        # 4. Generate markdown with LLM
+        capture_date = str(date.today())
+        raw_md = generate_markdown(
+            pdf_path, pandoc_md, domain, url, capture_date, hn_url
+        )
+        final_md = format_markdown(raw_md)
+
+        # 5. Extract metadata from generated frontmatter for folder naming
+        frontmatter, _ = strip_frontmatter(final_md)
+        title_slug = slugify(frontmatter["title"])
+        date_str = frontmatter.get("publish_date") or "unknown-date"
+        folder_name = f"{domain} - {date_str} - {title_slug}"
+
+        # 6. Save markdown and rename HTML
         (work_dir / f"{folder_name}.md").write_text(final_md)
         html_path.rename(work_dir / f"{folder_name}.html")
 
-        # 6. Move to final location
+        # 7. Move to final location
         output_base.mkdir(parents=True, exist_ok=True)
         final_dir = output_base / folder_name
 
@@ -264,44 +230,6 @@ def capture_url(url: str, output_base: Path, browser_arg: str | None) -> None:
         shutil.move(str(work_dir), str(final_dir))
 
     print(f"Saved to {final_dir}/")
-
-
-def retag(folder_path: Path) -> None:
-    """Re-extract metadata and update frontmatter for an existing capture."""
-    md_files = list(folder_path.glob("*.md"))
-    if not md_files:
-        sys.exit(f"Error: no .md file found in {folder_path}")
-    md_path = md_files[0]
-
-    # Read and strip existing frontmatter
-    original = md_path.read_text()
-    old_frontmatter, content = strip_frontmatter(original)
-
-    if not old_frontmatter:
-        sys.exit("Error: No frontmatter found in file")
-
-    # Re-extract metadata
-    metadata = extract_metadata(content)
-
-    # Look up HN thread, preserving existing value on failure
-    source_url = old_frontmatter.get("url", "")
-    hn_url = find_hn_thread(source_url) if source_url else None
-    if not hn_url:
-        hn_url = old_frontmatter.get("hackernews")
-
-    # Rebuild with preserved fields
-    final_md = add_frontmatter(
-        content,
-        metadata,
-        domain=old_frontmatter.get("domain", "unknown"),
-        url=source_url,
-        capture_date=str(old_frontmatter.get("capture_date", "")),
-        hackernews=hn_url,
-    )
-    final_md = format_markdown(final_md)
-    md_path.write_text(final_md)
-
-    print(f"Updated {md_path}")
 
 
 if __name__ == "__main__":

@@ -1,6 +1,6 @@
 """LLM interaction functions for capture pipeline."""
 
-import json
+import re
 import subprocess
 from pathlib import Path
 
@@ -13,27 +13,65 @@ def load_prompt(name: str) -> str:
     return (PROMPTS_DIR / f"{name}.md").read_text()
 
 
-def cleanup_markdown(markdown: str, pandoc_md: str | None = None) -> str:
-    """Clean up markdown with LLM, optionally merging two versions."""
-    rules = load_prompt("cleanup")
+def strip_code_fences(text: str) -> str:
+    """Strip markdown code fences from LLM output if present."""
+    text = text.strip()
+    # Match ```markdown, ```yaml, or just ``` at start
+    text = re.sub(r"^```(?:markdown|yaml|md)?\s*\n", "", text)
+    # Also strip fences after frontmatter (---\n...---\n```content```)
+    text = re.sub(
+        r"(^---\n.*?\n---\n)```(?:markdown|yaml|md)?\s*\n", r"\1", text, flags=re.DOTALL
+    )
+    # Remove trailing fence
+    text = re.sub(r"\n```\s*$", "", text)
+    return text
+
+
+def inject_frontmatter_fields(
+    markdown: str,
+    domain: str,
+    url: str,
+    capture_date: str,
+    hackernews: str | None = None,
+) -> str:
+    """Inject known metadata fields into frontmatter after title line."""
+    lines = []
+    if domain:
+        lines.append(f"domain: {domain}")
+    if url:
+        lines.append(f"url: {url}")
+    if hackernews:
+        lines.append(f"hackernews: {hackernews}")
+    lines.append(f"capture_date: {capture_date}")
+
+    if not lines:
+        return markdown
+
+    inject = "\n".join(lines)
+    # Insert after the title line in frontmatter
+    return re.sub(
+        r"(^---\n.*?title:[^\n]*\n)", rf"\1{inject}\n", markdown, flags=re.DOTALL
+    )
+
+
+def generate_markdown(
+    pdf_path: Path,
+    pandoc_md: str | None,
+    domain: str,
+    url: str,
+    capture_date: str,
+    hackernews: str | None = None,
+) -> str:
+    """Generate clean markdown with frontmatter from PDF and optional pandoc output."""
+    print("Generating markdown with LLM...")
+
+    prompt = load_prompt("generate")
 
     if pandoc_md:
-        print("Merging with LLM...")
-        merge_intro = load_prompt("merge")
-        prompt = (
-            f"{merge_intro}\n{rules}\n"
-            f"VERSION A (from Reducto - has accurate math equations and tables):\n{markdown}\n\n"
-            f"VERSION B (from Pandoc - has image references and hyperlinks):\n{pandoc_md}"
-        )
-    else:
-        print("Cleaning up with LLM...")
-        prompt = (
-            f"You are cleaning up raw Markdown into polished, idiomatic Markdown.\n\n"
-            f"{rules}\n{markdown}"
-        )
+        prompt = f"{prompt}\n\n## Pandoc Markdown (has image references and links)\n\n{pandoc_md}"
 
     result = subprocess.run(
-        ["python", str(LLM_SCRIPT)],
+        ["python", str(LLM_SCRIPT), "-a", str(pdf_path)],
         input=prompt,
         capture_output=True,
         text=True,
@@ -41,24 +79,6 @@ def cleanup_markdown(markdown: str, pandoc_md: str | None = None) -> str:
     if result.returncode != 0:
         print(f"LLM error (exit {result.returncode}): {result.stderr}", flush=True)
         raise subprocess.CalledProcessError(result.returncode, result.args)
-    return result.stdout
 
-
-def extract_metadata(markdown: str) -> dict:
-    """Use llm.py to extract metadata from the markdown."""
-    print("Extracting metadata...")
-
-    template = load_prompt("metadata")
-    prompt = template.format(markdown=markdown[:8000])  # Limit context size
-    schema_path = PROMPTS_DIR / "metadata_schema.json"
-
-    result = subprocess.run(
-        ["python", str(LLM_SCRIPT), "--schema", str(schema_path)],
-        input=prompt,
-        capture_output=True,
-        text=True,
-    )
-    if result.returncode != 0:
-        print(f"LLM error (exit {result.returncode}): {result.stderr}", flush=True)
-        raise subprocess.CalledProcessError(result.returncode, result.args)
-    return json.loads(result.stdout)
+    markdown = strip_code_fences(result.stdout)
+    return inject_frontmatter_fields(markdown, domain, url, capture_date, hackernews)
