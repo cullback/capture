@@ -32,11 +32,6 @@ def main():
     )
     parser.add_argument("-b", "--browser", help="Browser executable path")
     parser.add_argument(
-        "--no-reducto",
-        action="store_true",
-        help="Skip Reducto + LLM merge, use pandoc only",
-    )
-    parser.add_argument(
         "--retag",
         metavar="FOLDER",
         help="Re-extract tags for an existing capture folder",
@@ -61,10 +56,12 @@ def main():
 
     if is_pdf:
         capture_pdf(input_path, Path(args.output))
+        input_path.unlink()
     elif is_html:
-        capture_html_file(input_path, Path(args.output), args.browser, args.no_reducto)
+        capture_html_file(input_path, Path(args.output), args.browser)
+        input_path.unlink()
     else:
-        capture_url(args.input, Path(args.output), args.browser, args.no_reducto)
+        capture_url(args.input, Path(args.output), args.browser)
 
 
 def capture_pdf(pdf_path: Path, output_base: Path) -> None:
@@ -124,7 +121,7 @@ def extract_singlefile_url(html_path: Path) -> str | None:
 
 
 def capture_html_file(
-    html_path: Path, output_base: Path, browser_arg: str | None, no_reducto: bool
+    html_path: Path, output_base: Path, browser_arg: str | None
 ) -> None:
     """Capture a local HTML file as markdown."""
     # Try to extract original URL from SingleFile metadata
@@ -136,6 +133,14 @@ def capture_html_file(
     else:
         domain = html_path.stem
 
+    reducto_key = os.environ.get("REDUCTO_API_KEY")
+    if not reducto_key:
+        sys.exit("Error: REDUCTO_API_KEY environment variable not set")
+
+    browser = browser_arg or find_browser()
+    if not browser:
+        sys.exit(f"No browser found. Tried: {', '.join(BROWSER_CANDIDATES)}")
+
     with tempfile.TemporaryDirectory() as tmpdir:
         work_dir = Path(tmpdir) / "capture"
         work_dir.mkdir()
@@ -144,25 +149,13 @@ def capture_html_file(
         work_html = work_dir / "page.html"
         shutil.copy2(html_path, work_html)
 
-        if no_reducto:
-            pandoc_md = call_pandoc(work_html, work_dir)
-            content_md = format_markdown(pandoc_md)
-        else:
-            reducto_key = os.environ.get("REDUCTO_API_KEY")
-            if not reducto_key:
-                sys.exit("Error: REDUCTO_API_KEY environment variable not set")
+        pdf_path = Path(tmpdir) / "page.pdf"
+        html_to_pdf(work_html, pdf_path, browser)
 
-            browser = browser_arg or find_browser()
-            if not browser:
-                sys.exit(f"No browser found. Tried: {', '.join(BROWSER_CANDIDATES)}")
-
-            pdf_path = Path(tmpdir) / "page.pdf"
-            html_to_pdf(work_html, pdf_path, browser)
-
-            reducto_md = call_reducto(pdf_path, reducto_key)
-            pandoc_md = call_pandoc(work_html, work_dir)
-            merged_md = cleanup_markdown(reducto_md, pandoc_md)
-            content_md = format_markdown(merged_md)
+        reducto_md = call_reducto(pdf_path, reducto_key)
+        pandoc_md = call_pandoc(work_html, work_dir)
+        merged_md = cleanup_markdown(reducto_md, pandoc_md)
+        content_md = format_markdown(merged_md)
 
         # Extract metadata
         metadata = extract_metadata(content_md)
@@ -194,13 +187,15 @@ def capture_html_file(
     print(f"Saved to {final_dir}/")
 
 
-def capture_url(
-    url: str, output_base: Path, browser_arg: str | None, no_reducto: bool
-) -> None:
+def capture_url(url: str, output_base: Path, browser_arg: str | None) -> None:
     """Capture a URL as markdown."""
     browser = browser_arg or find_browser()
     if not browser:
         sys.exit(f"No browser found. Tried: {', '.join(BROWSER_CANDIDATES)}")
+
+    reducto_key = os.environ.get("REDUCTO_API_KEY")
+    if not reducto_key:
+        sys.exit("Error: REDUCTO_API_KEY environment variable not set")
 
     domain = url.removeprefix("https://").removeprefix("http://").split("/")[0]
 
@@ -213,31 +208,21 @@ def capture_url(
         # 1. Capture HTML
         capture_html(url, html_path, browser)
 
-        if no_reducto:
-            # Pandoc only
-            pandoc_md = call_pandoc(html_path, work_dir)
-            content_md = format_markdown(pandoc_md)
-        else:
-            # Default: Reducto + Pandoc + LLM merge
-            reducto_key = os.environ.get("REDUCTO_API_KEY")
-            if not reducto_key:
-                sys.exit("Error: REDUCTO_API_KEY environment variable not set")
+        # Convert HTML to PDF (in temp)
+        pdf_path = Path(tmpdir) / "page.pdf"
+        html_to_pdf(html_path, pdf_path, browser)
 
-            # Convert HTML to PDF (in temp)
-            pdf_path = Path(tmpdir) / "page.pdf"
-            html_to_pdf(html_path, pdf_path, browser)
+        # Get markdown from Reducto (math/tables)
+        reducto_md = call_reducto(pdf_path, reducto_key)
 
-            # Get markdown from Reducto (math/tables)
-            reducto_md = call_reducto(pdf_path, reducto_key)
+        # Get markdown from Pandoc (images/links)
+        pandoc_md = call_pandoc(html_path, work_dir)
 
-            # Get markdown from Pandoc (images/links)
-            pandoc_md = call_pandoc(html_path, work_dir)
+        # Merge with LLM
+        merged_md = cleanup_markdown(reducto_md, pandoc_md)
 
-            # Merge with LLM
-            merged_md = cleanup_markdown(reducto_md, pandoc_md)
-
-            # Format with dprint
-            content_md = format_markdown(merged_md)
+        # Format with dprint
+        content_md = format_markdown(merged_md)
 
         # 2. Extract metadata
         metadata = extract_metadata(content_md)

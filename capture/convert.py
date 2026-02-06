@@ -109,19 +109,28 @@ def call_reducto(pdf_path: Path, api_key: str) -> str:
 
 
 def strip_css_data_uris(html_path: Path) -> None:
-    """Strip CSS background-image data URIs from HTML.
+    """Strip CSS data URIs from HTML (fonts, background images, etc).
 
-    Pandoc's --extract-media only handles <img> elements, not CSS background
-    images. Large data URIs in CSS (e.g., LQIP placeholders) would otherwise
-    end up inline in the markdown output, potentially exceeding LLM token limits.
+    Pandoc's --extract-media only handles <img> elements, not CSS data URIs.
+    Large embedded fonts, emoji sprite sheets, and LQIP placeholders would
+    otherwise end up inline in the markdown output, exceeding LLM token limits.
     """
     html = html_path.read_text(errors="ignore")
+    original = html
+
     # Replace background-image:url(data:...) with background-image:none
-    cleaned = re.sub(
+    html = re.sub(
         r"background-image:\s*url\(data:[^)]+\)", "background-image:none", html
     )
-    if cleaned != html:
-        html_path.write_text(cleaned)
+
+    # Replace background:url(data:...) shorthand (e.g., emoji sprites)
+    html = re.sub(r"background:\s*url\(data:[^)]+\)", "background:none", html)
+
+    # Remove font data URIs: url(data:font/...) or url("data:font/...")
+    html = re.sub(r'url\(["\']?data:font/[^)]+\)', "url()", html)
+
+    if html != original:
+        html_path.write_text(html)
 
 
 def call_pandoc(html_path: Path, output_dir: Path) -> str:
