@@ -71,7 +71,11 @@ def capture_pdf(pdf_path: Path, output_base: Path, domain_override: str | None) 
     if not reducto_key:
         sys.exit("Error: REDUCTO_API_KEY environment variable not set")
 
-    source = domain_override or pdf_path.stem
+    source = (
+        domain_override.removeprefix("https://").removeprefix("http://").split("/")[0]
+        if domain_override
+        else pdf_path.stem
+    )
 
     work_dir = output_base / "tmp_capture"
     work_dir.mkdir(parents=True, exist_ok=True)
@@ -131,7 +135,11 @@ def capture_html_file(
     # Try to extract original URL from SingleFile metadata
     source_url = extract_singlefile_url(html_path) or ""
     if domain_override:
-        domain = domain_override
+        domain = (
+            domain_override.removeprefix("https://")
+            .removeprefix("http://")
+            .split("/")[0]
+        )
     elif source_url:
         domain = (
             source_url.removeprefix("https://").removeprefix("http://").split("/")[0]
