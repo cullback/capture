@@ -32,7 +32,7 @@ def main():
     parser.add_argument("-d", "--domain", help="Override domain for PDF/HTML captures")
     parser.add_argument("-n", "--name", help="Override output folder name")
     parser.add_argument(
-        "--strip-images", action="store_true", help="Don't save image files"
+        "--no-images", action="store_true", help="Don't save image files"
     )
     args = parser.parse_args()
 
@@ -60,11 +60,11 @@ def main():
             args.browser,
             args.domain,
             args.name,
-            args.strip_images,
+            args.no_images,
         )
         input_path.unlink()
     else:
-        capture_url(args.input, output_dir, args.browser, args.name, args.strip_images)
+        capture_url(args.input, output_dir, args.browser, args.name, args.no_images)
 
 
 def capture_pdf(
@@ -130,7 +130,7 @@ def capture_html_file(
     browser_arg: str | None,
     domain_override: str | None,
     name_override: str | None,
-    strip_images: bool,
+    no_images: bool,
 ) -> None:
     """Capture a local HTML file as markdown."""
     from datetime import date
@@ -165,7 +165,7 @@ def capture_html_file(
         # Convert to PDF and get pandoc markdown
         pdf_path = Path(tmpdir) / "page.pdf"
         html_to_pdf(work_html, pdf_path, browser)
-        pandoc_md = call_pandoc(work_html, work_dir, extract_images=not strip_images)
+        pandoc_md = call_pandoc(work_html, work_dir, extract_images=not no_images)
 
         # Look up HN thread
         hn_url = find_hn_thread(source_url) if source_url else None
@@ -187,8 +187,8 @@ def capture_html_file(
         (work_dir / f"{folder_name}.md").write_text(final_md)
         work_html.rename(work_dir / f"{folder_name}.html")
 
-        # Remove images directory if strip_images
-        if strip_images:
+        # Remove images directory if no_images
+        if no_images:
             images_dir = work_dir / "images"
             if images_dir.exists():
                 shutil.rmtree(images_dir)
@@ -209,7 +209,7 @@ def capture_url(
     output_base: Path,
     browser_arg: str | None,
     name_override: str | None,
-    strip_images: bool,
+    no_images: bool,
 ) -> None:
     """Capture a URL as markdown."""
     from datetime import date
@@ -232,7 +232,7 @@ def capture_url(
         # 2. Convert to PDF and get pandoc markdown
         pdf_path = Path(tmpdir) / "page.pdf"
         html_to_pdf(html_path, pdf_path, browser)
-        pandoc_md = call_pandoc(html_path, work_dir, extract_images=not strip_images)
+        pandoc_md = call_pandoc(html_path, work_dir, extract_images=not no_images)
 
         # 3. Look up HN thread
         hn_url = find_hn_thread(url)
@@ -255,8 +255,8 @@ def capture_url(
 
         html_path.rename(work_dir / f"{folder_name}.html")
 
-        # 7. Remove images directory if strip_images
-        if strip_images:
+        # 7. Remove images directory if no_images
+        if no_images:
             images_dir = work_dir / "images"
             if images_dir.exists():
                 shutil.rmtree(images_dir)
