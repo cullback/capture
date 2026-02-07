@@ -38,7 +38,7 @@ The article content MUST start with a first-level header (`# Title`) matching th
 - **Formatting**: Preserve emphasis (_italics_, **bold**) and blockquotes
 - **Hyphenation**: Rejoin words broken across line breaks (e.g., "compu-\ntation" → "computation")
 - **Layout**: Linearize multi-column layouts into single-column reading order
-- **Figures**: Preserve captions. Use image references from Pandoc Markdown if available.
+- **Figures**: ALWAYS include a detailed caption for every image that fully describes its content. Write as if for a blind reader—someone should be able to understand or roughly recreate the image from your description alone. For charts/graphs: describe the data, axes, trends, and key values. For diagrams: describe the components, relationships, and flow. For screenshots: describe the UI elements and their state. For photos: describe the subject, composition, and relevant details. Use image references from Pandoc Markdown if available.
 - **Comments**: If user comments exist, include under `## Comments` heading. Format as blockquotes with author in bold. Use nested blockquotes for reply threading.
 - **Artifacts**: Remove navigation elements, share buttons, cookie notices, page numbers, repeated headers/footers
 

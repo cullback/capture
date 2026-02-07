@@ -76,8 +76,10 @@ def strip_css_data_uris(html_path: Path) -> None:
         html_path.write_text(html)
 
 
-def call_pandoc(html_path: Path, output_dir: Path) -> str:
-    """Convert HTML to markdown with Pandoc, extracting images."""
+def call_pandoc(
+    html_path: Path, output_dir: Path, *, extract_images: bool = True
+) -> str:
+    """Convert HTML to markdown with Pandoc, optionally extracting images."""
     strip_css_data_uris(html_path)
     print("Converting with Pandoc...")
     cmd = [
@@ -86,10 +88,10 @@ def call_pandoc(html_path: Path, output_dir: Path) -> str:
         "html",
         "-t",
         "markdown",
-        "--extract-media",
-        "images",
-        str(html_path.absolute()),
     ]
+    if extract_images:
+        cmd += ["--extract-media", "images"]
+    cmd.append(str(html_path.absolute()))
 
     result = subprocess.run(
         cmd, capture_output=True, text=True, check=True, cwd=output_dir

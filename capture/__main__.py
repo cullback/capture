@@ -30,6 +30,10 @@ def main():
     )
     parser.add_argument("-b", "--browser", help="Browser executable path")
     parser.add_argument("-d", "--domain", help="Override domain for PDF/HTML captures")
+    parser.add_argument("-n", "--name", help="Override output folder name")
+    parser.add_argument(
+        "--strip-images", action="store_true", help="Don't save image files"
+    )
     args = parser.parse_args()
 
     # Capture mode requires input and output
@@ -47,16 +51,28 @@ def main():
     is_html = input_path.suffix.lower() in (".html", ".htm") and input_path.exists()
 
     if is_pdf:
-        capture_pdf(input_path, output_dir, args.domain)
+        capture_pdf(input_path, output_dir, args.domain, args.name)
         input_path.unlink()
     elif is_html:
-        capture_html_file(input_path, output_dir, args.browser, args.domain)
+        capture_html_file(
+            input_path,
+            output_dir,
+            args.browser,
+            args.domain,
+            args.name,
+            args.strip_images,
+        )
         input_path.unlink()
     else:
-        capture_url(args.input, output_dir, args.browser)
+        capture_url(args.input, output_dir, args.browser, args.name, args.strip_images)
 
 
-def capture_pdf(pdf_path: Path, output_base: Path, domain_override: str | None) -> None:
+def capture_pdf(
+    pdf_path: Path,
+    output_base: Path,
+    domain_override: str | None,
+    name_override: str | None,
+) -> None:
     """Capture a local PDF file as markdown via vision LLM."""
     from datetime import date
 
@@ -79,7 +95,7 @@ def capture_pdf(pdf_path: Path, output_base: Path, domain_override: str | None) 
         frontmatter, _ = strip_frontmatter(final_md)
         title_slug = slugify(frontmatter["title"])
         date_str = frontmatter.get("publish_date") or "unknown-date"
-        folder_name = f"{source} - {date_str} - {title_slug}"
+        folder_name = name_override or f"{source} - {date_str} - {title_slug}"
 
         # 3. Save markdown and copy original PDF
         (work_dir / f"{folder_name}.md").write_text(final_md)
@@ -113,6 +129,8 @@ def capture_html_file(
     output_base: Path,
     browser_arg: str | None,
     domain_override: str | None,
+    name_override: str | None,
+    strip_images: bool,
 ) -> None:
     """Capture a local HTML file as markdown."""
     from datetime import date
@@ -147,7 +165,7 @@ def capture_html_file(
         # Convert to PDF and get pandoc markdown
         pdf_path = Path(tmpdir) / "page.pdf"
         html_to_pdf(work_html, pdf_path, browser)
-        pandoc_md = call_pandoc(work_html, work_dir)
+        pandoc_md = call_pandoc(work_html, work_dir, extract_images=not strip_images)
 
         # Look up HN thread
         hn_url = find_hn_thread(source_url) if source_url else None
@@ -163,11 +181,17 @@ def capture_html_file(
         frontmatter, _ = strip_frontmatter(final_md)
         title_slug = slugify(frontmatter["title"])
         date_str = frontmatter.get("publish_date") or "unknown-date"
-        folder_name = f"{domain} - {date_str} - {title_slug}"
+        folder_name = name_override or f"{domain} - {date_str} - {title_slug}"
 
         # Save markdown and rename HTML
         (work_dir / f"{folder_name}.md").write_text(final_md)
         work_html.rename(work_dir / f"{folder_name}.html")
+
+        # Remove images directory if strip_images
+        if strip_images:
+            images_dir = work_dir / "images"
+            if images_dir.exists():
+                shutil.rmtree(images_dir)
 
         # Move to final location
         output_base.mkdir(parents=True, exist_ok=True)
@@ -180,7 +204,13 @@ def capture_html_file(
     print(f"Saved to {final_dir}/")
 
 
-def capture_url(url: str, output_base: Path, browser_arg: str | None) -> None:
+def capture_url(
+    url: str,
+    output_base: Path,
+    browser_arg: str | None,
+    name_override: str | None,
+    strip_images: bool,
+) -> None:
     """Capture a URL as markdown."""
     from datetime import date
 
@@ -202,7 +232,7 @@ def capture_url(url: str, output_base: Path, browser_arg: str | None) -> None:
         # 2. Convert to PDF and get pandoc markdown
         pdf_path = Path(tmpdir) / "page.pdf"
         html_to_pdf(html_path, pdf_path, browser)
-        pandoc_md = call_pandoc(html_path, work_dir)
+        pandoc_md = call_pandoc(html_path, work_dir, extract_images=not strip_images)
 
         # 3. Look up HN thread
         hn_url = find_hn_thread(url)
@@ -218,13 +248,20 @@ def capture_url(url: str, output_base: Path, browser_arg: str | None) -> None:
         frontmatter, _ = strip_frontmatter(final_md)
         title_slug = slugify(frontmatter["title"])
         date_str = frontmatter.get("publish_date") or "unknown-date"
-        folder_name = f"{domain} - {date_str} - {title_slug}"
+        folder_name = name_override or f"{domain} - {date_str} - {title_slug}"
 
         # 6. Save markdown and rename HTML
         (work_dir / f"{folder_name}.md").write_text(final_md)
+
         html_path.rename(work_dir / f"{folder_name}.html")
 
-        # 7. Move to final location
+        # 7. Remove images directory if strip_images
+        if strip_images:
+            images_dir = work_dir / "images"
+            if images_dir.exists():
+                shutil.rmtree(images_dir)
+
+        # 8. Move to final location
         output_base.mkdir(parents=True, exist_ok=True)
         final_dir = output_base / folder_name
 
