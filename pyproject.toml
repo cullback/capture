@@ -6,3 +6,9 @@ requires-python = ">=3.12"
 dependencies = [
   "pyyaml>=6.0.3",
 ]
+
+[project.scripts]
+capture = "capture.__main__:main"
+
+[tool.setuptools]
+packages = ["capture"]
