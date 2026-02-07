@@ -4,7 +4,7 @@ import re
 import subprocess
 from pathlib import Path
 
-PROMPTS_DIR = Path(__file__).parent.parent / "prompts"
+PROMPTS_DIR = Path(__file__).parent / "prompts"
 LLM_SCRIPT = Path.home() / "repos/dotfiles/scripts/llm.py"
 
 

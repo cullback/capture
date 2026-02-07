@@ -12,3 +12,7 @@ capture = "capture.__main__:main"
 
 [tool.setuptools]
 packages = ["capture"]
+include-package-data = true
+
+[tool.setuptools.package-data]
+capture = ["prompts/*.md"]

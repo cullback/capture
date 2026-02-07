@@ -38,19 +38,22 @@ def main():
     if not args.output:
         parser.error("-o/--output is required for capture mode")
 
+    output_dir = Path(args.output)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
     # Detect PDF, HTML, or URL
     input_path = Path(args.input)
     is_pdf = input_path.suffix.lower() == ".pdf" and input_path.exists()
     is_html = input_path.suffix.lower() in (".html", ".htm") and input_path.exists()
 
     if is_pdf:
-        capture_pdf(input_path, Path(args.output), args.domain)
+        capture_pdf(input_path, output_dir, args.domain)
         input_path.unlink()
     elif is_html:
-        capture_html_file(input_path, Path(args.output), args.browser, args.domain)
+        capture_html_file(input_path, output_dir, args.browser, args.domain)
         input_path.unlink()
     else:
-        capture_url(args.input, Path(args.output), args.browser)
+        capture_url(args.input, output_dir, args.browser)
 
 
 def capture_pdf(pdf_path: Path, output_base: Path, domain_override: str | None) -> None:
