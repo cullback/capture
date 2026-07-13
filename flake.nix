@@ -28,6 +28,9 @@
             fd
             ripgrep
             nixfmt-rfc-style
+            single-file-cli
+            chromium
+            pandoc
           ];
         };
       }

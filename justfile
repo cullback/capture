@@ -25,3 +25,7 @@ check:
 # Run the test suite
 test:
     pytest
+
+# Save a page as faithful HTML archive + clean markdown in data/
+capture url *flags:
+    uv run python -m capture {{ flags }} '{{ url }}'
