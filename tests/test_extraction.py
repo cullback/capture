@@ -5,18 +5,16 @@ site it came from is named in the comment. If a new site needs a new
 strategy, add its minimal reproduction here.
 """
 
-from capture.__main__ import (
-    arxiv_id,
-    arxiv_published,
+from capture.extract import (
     body_date,
     normalize,
-    original_url,
     page_slug,
     page_title,
     published_date,
     slugify,
     strip_site_suffix,
 )
+from capture.resolvers import arxiv_id, arxiv_published, original_url
 
 
 def test_slugify_drops_apostrophes():
@@ -173,7 +171,7 @@ def test_title_url_slug_disambiguates_wrapped_h1():
 
 
 def test_slug_affinity_survives_truncated_slugs():
-    from capture.__main__ import slug_affinity
+    from capture.extract import slug_affinity
 
     # buttondown.com/hillelwayne: the slug drops the final word
     assert slug_affinity(
@@ -184,7 +182,7 @@ def test_slug_affinity_survives_truncated_slugs():
 
 
 def test_github_blob_markdown(monkeypatch):
-    import capture.__main__ as module
+    import capture.resolvers as module
 
     monkeypatch.setattr(module, "fetch_html", lambda u: "# CORDIC\n![d](img.png)")
     gh = module.github_markdown("https://github.com/o/r/blob/main/2024/5/10/cordic.md")
@@ -315,7 +313,7 @@ def test_normalize_ignores_www_scheme_and_trailing_slash():
 
 
 def test_existing_capture_matches_frontmatter_url(tmp_path, monkeypatch):
-    import capture.__main__ as module
+    import capture.pipeline as module
 
     monkeypatch.setattr(module, "REPO_ROOT", tmp_path)
     folder = tmp_path / "data" / "example.com - 2025-01-01 - post"
@@ -328,7 +326,7 @@ def test_existing_capture_matches_frontmatter_url(tmp_path, monkeypatch):
 
 
 def test_existing_capture_resolves_arxiv_forms(tmp_path, monkeypatch):
-    import capture.__main__ as module
+    import capture.pipeline as module
 
     monkeypatch.setattr(module, "REPO_ROOT", tmp_path)
     folder = tmp_path / "data" / "arxiv.org - 2026-03-23 - paper"

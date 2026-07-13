@@ -6,7 +6,7 @@ Slow and network-dependent, so excluded by default; run with
 
 import pytest
 
-from capture.__main__ import capture
+from capture.pipeline import capture
 
 pytestmark = pytest.mark.live
 
