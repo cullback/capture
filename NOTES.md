@@ -80,6 +80,48 @@ If that stops, the fallback is a stealth browser with real cookies.
   The raw curl HTML still holds the original `$$...$$`, which is why
   markdown converts from the raw fetch rather than the rendered DOM.
 
+## Title extraction is a scored candidate set
+
+The ordered rule cascade broke twice from rules interacting (the AoPS
+prefix rule misfired on Headlands; the length fallback misfired on
+gameprogrammingpatterns), so `extract.page_title` now generates
+candidates (og:title in four attribute spellings, class-marked
+headings, first h1, `<title>`, wrap remainders) and ranks them by
+source priors plus a gated slug-affinity bonus and site-name
+penalties. Generation rules only add to the set, so they compose;
+conflicts resolve numerically. The rewrite reproduced the cascade's
+output on all 109 captured artifacts. Lessons encoded as scores:
+
+- h1s linking to the site root are mastheads, and their text is the
+  site's display name, stripped as a title prefix (eli.li bakes
+  "Oatmeal - " into og:title).
+- Blogger writes `content=` before `property=`, single-quoted; eev.ee
+  writes `name="og:title"`.
+- Obsidian Publish has no h1; the title is an h2
+  (publish-article-heading), and pages expose no dates at all.
+- The URL slug arbitrates "Title · Section" vs "Section : Title"
+  document titles, via gated `difflib` similarity so truncated slugs
+  still match.
+
+## GitHub blobs and gists: skip conversion
+
+Blob URLs ending in .md fetch the raw file: it IS the markdown.
+Title from the file's first heading, date from a /YYYY/M/D/ path,
+relative images rebased onto raw.githubusercontent.com. Gists go
+through the gist API, which also supplies created_at. The browser
+still archives the rendered page as the .html artifact.
+
+## Code blocks and formatting
+
+- Pandoc writes code fences only when the block carries a language;
+  syntax-highlighter classes ("highlight") get dropped by the gfm
+  writer, producing indented blocks. `filters/clean.lua` normalizes:
+  junk classes become `text`, and Jekyll/Rouge's language lives on an
+  ancestor div (`language-ruby`) that gets pushed down onto the block.
+- Captured markdown is dprint-formatted at capture time (via stdin,
+  dodging the data/ exclude). The exclude exists because repo-wide
+  `just format` once reformatted 67MB of captures and took minutes.
+
 ## First heuristic defeat: blog.vortan.dev
 
 The ematching post publishes no date at all: none in the page, none in
