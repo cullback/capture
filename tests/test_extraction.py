@@ -195,32 +195,17 @@ def test_youtube_id_from_url_forms():
     assert youtube_id("https://www.youtube.com/@somechannel") is None
 
 
-def test_transcript_from_json3_dedupes_and_joins():
-    from capture.resolvers import transcript_from_json3
-
-    text = (
-        '{"events": ['
-        '{"segs": [{"utf8": "Alright, so here "}, {"utf8": "we are"}]},'
-        '{"segs": [{"utf8": "\\n"}]},'
-        '{"segs": [{"utf8": "Alright, so here we are"}]},'
-        '{"segs": [{"utf8": "in front of the elephants"}]}'
-        "]}"
-    )
-    assert transcript_from_json3(text) == (
-        "Alright, so here we are\nin front of the elephants"
-    )
-
-
 def test_existing_capture_resolves_youtube_forms(tmp_path, monkeypatch):
     import capture.pipeline as module
 
     monkeypatch.setattr(module, "REPO_ROOT", tmp_path)
     folder = tmp_path / "data" / "youtube.com - 2005-04-23 - me-at-the-zoo"
     folder.mkdir(parents=True)
-    (folder / "youtube.com - 2005-04-23 - me-at-the-zoo.md").write_text(
-        "---\nurl: https://www.youtube.com/watch?v=jNQXAC9IVRw\n---\n"
+    (folder / "youtube.com - 2005-04-23 - me-at-the-zoo.info.json").write_text(
+        '{"id": "jNQXAC9IVRw", "title": "Me at the zoo"}'
     )
     assert module.existing_capture("https://youtu.be/jNQXAC9IVRw") == folder
+    assert module.existing_capture("https://youtu.be/AAAAAAAAAAA") is None
 
 
 def test_github_blob_markdown(monkeypatch):

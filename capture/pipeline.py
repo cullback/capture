@@ -91,6 +91,9 @@ def capture(url: str) -> Path:
     # Prefer converting from the URL so relative image paths resolve; fall
     # back to the local artifact when the direct fetch fails or the raw
     # HTML had no real content. Ready-made markdown skips conversion.
+    if resolution.skip_markdown:
+        return folder
+
     markdown = folder / f"{name}.md"
     if resolution.markdown is not None:
         markdown.write_text(resolution.markdown)
@@ -197,11 +200,15 @@ def format_markdown(markdown: Path) -> None:
 
 def existing_capture(url: str) -> Path | None:
     """The folder already holding this URL, matched via frontmatter."""
+    if vid := youtube_id(url):
+        # Video captures have no markdown; match the id in info.json.
+        for info in sorted((REPO_ROOT / "data").glob("*/*.info.json")):
+            if f'"id": "{vid}"' in info.read_text(errors="replace"):
+                return info.parent
+        return None
     target = normalize(url)
     if aid := arxiv_id(url):
         target = normalize(f"https://arxiv.org/abs/{aid}")
-    elif vid := youtube_id(url):
-        target = normalize(f"https://www.youtube.com/watch?v={vid}")
     for markdown in sorted((REPO_ROOT / "data").glob("*/*.md")):
         header = markdown.read_text(errors="replace")[:600]
         for line in header.splitlines():

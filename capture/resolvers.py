@@ -9,7 +9,6 @@ means adding a resolver here, not a branch in the pipeline.
 import json
 import re
 import subprocess
-import tempfile
 import urllib.request
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -31,6 +30,7 @@ class Resolution:
     publish: str | None = None  # publish date, when the source knows it
     archive: str | None = None  # snapshot URL, for archived pages
     markdown: str | None = None  # ready-made body, skipping pandoc
+    skip_markdown: bool = False  # media captures describe themselves
     title: str | None = None  # title override
     pdf_url: str | None = None  # extra artifact to download
     extra: dict[str, str] = field(default_factory=dict)  # frontmatter additions
@@ -109,8 +109,9 @@ def yt_dlp(args: list[str]) -> subprocess.CompletedProcess:
 
 
 def resolve_youtube(url: str) -> Resolution | None:
-    """Markdown from metadata plus transcript; the video itself is
-    downloaded at archival quality with everything embedded in one mkv."""
+    """Video captures are mkv + info.json (the yt-dlp standard), no
+    markdown: the info.json carries all metadata and the transcript
+    lives in the mkv's embedded subtitles."""
     vid = youtube_id(url)
     if not vid:
         return None
@@ -120,57 +121,15 @@ def resolve_youtube(url: str) -> Resolution | None:
         raise RuntimeError(f"yt-dlp failed for {source}: {probe.stderr.strip()[:300]}")
     meta = json.loads(probe.stdout)
     upload = meta.get("upload_date") or ""
-    sections = [f"# {meta.get('title', '')}"]
-    if description := (meta.get("description") or "").strip():
-        sections.append("## Description\n\n" + description)
-    if transcript := youtube_transcript(source):
-        sections.append("## Transcript\n\n" + transcript)
-    extra = {"channel": meta.get("channel") or meta.get("uploader") or ""}
-    if duration := meta.get("duration_string"):
-        extra["duration"] = duration
     return Resolution(
         source=source,
         content=source,
         use_browser=False,
         publish=f"{upload[:4]}-{upload[4:6]}-{upload[6:]}" if upload else None,
-        markdown="\n\n".join(sections) + "\n",
+        skip_markdown=True,
         title=meta.get("title"),
-        extra=extra,
         download_media=lambda folder, name: youtube_download(source, folder, name),
     )
-
-
-def youtube_transcript(source: str) -> str:
-    """Manual or auto captions as plain text, via json3 subtitles."""
-    with tempfile.TemporaryDirectory() as tmp:
-        yt_dlp(
-            [
-                "--skip-download",
-                "--write-subs",
-                "--write-auto-subs",
-                "--sub-langs",
-                "en,en-orig",
-                "--sub-format",
-                "json3",
-                "-o",
-                f"{tmp}/subs",
-                source,
-            ]
-        )
-        files = sorted(Path(tmp).glob("*.json3"))
-        if not files:
-            return ""
-        return transcript_from_json3(files[0].read_text())
-
-
-def transcript_from_json3(text: str) -> str:
-    lines: list[str] = []
-    for event in json.loads(text).get("events", []):
-        line = "".join(seg.get("utf8", "") for seg in event.get("segs", []))
-        line = re.sub(r"\s+", " ", line).strip()
-        if line and (not lines or lines[-1] != line):
-            lines.append(line)
-    return "\n".join(lines)
 
 
 def youtube_download(source: str, folder: Path, name: str) -> None:
@@ -191,6 +150,7 @@ def youtube_download(source: str, folder: Path, name: str) -> None:
             "--embed-chapters",
             "--embed-subs",
             "--embed-info-json",
+            "--write-info-json",
             "--sub-langs",
             "en,en-orig",
             "--write-auto-subs",
