@@ -31,6 +31,8 @@
             single-file-cli
             chromium
             pandoc
+            yt-dlp
+            ffmpeg
           ];
         };
       }

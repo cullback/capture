@@ -237,4 +237,9 @@ def page_slug(url: str, html: str) -> str:
 
 def normalize(url: str) -> str:
     parsed = urlparse(url)
-    return parsed.netloc.removeprefix("www.") + parsed.path.rstrip("/")
+    base = parsed.netloc.removeprefix("www.") + parsed.path.rstrip("/")
+    # Queries are noise (tracking params), except when they carry the
+    # page identity, as in youtube.com/watch?v=...
+    if match := re.search(r"(?:^|&)v=([^&]+)", parsed.query):
+        base += f"?v={match.group(1)}"
+    return base

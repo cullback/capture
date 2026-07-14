@@ -9,29 +9,41 @@ means adding a resolver here, not a branch in the pipeline.
 import json
 import re
 import subprocess
+import tempfile
 import urllib.request
-from dataclasses import dataclass
+from collections.abc import Callable
+from dataclasses import dataclass, field
 from pathlib import Path
 from urllib.parse import quote, urljoin, urlparse
 
 from capture.extract import body_date, normalize
+
+# Netscape-format cookies, for age-restricted or member-only videos.
+YOUTUBE_COOKIES = Path.home() / ".config" / "capture" / "youtube-cookies.txt"
 
 
 @dataclass
 class Resolution:
     source: str  # identity URL: naming, frontmatter, HN lookup
     content: str  # URL to render and convert
-    html: str  # fetched identity page
+    html: str = ""  # fetched identity page ("" = no HTML artifact)
     use_browser: bool = True  # single-file the content URL
     publish: str | None = None  # publish date, when the source knows it
     archive: str | None = None  # snapshot URL, for archived pages
     markdown: str | None = None  # ready-made body, skipping pandoc
     title: str | None = None  # title override
     pdf_url: str | None = None  # extra artifact to download
+    extra: dict[str, str] = field(default_factory=dict)  # frontmatter additions
+    download_media: Callable[[Path, str], None] | None = None  # (folder, name)
 
 
 def resolve(url: str) -> Resolution:
-    return resolve_arxiv(url) or resolve_github(url) or resolve_default(url)
+    return (
+        resolve_arxiv(url)
+        or resolve_github(url)
+        or resolve_youtube(url)
+        or resolve_default(url)
+    )
 
 
 def fetch_html(url: str) -> str:
@@ -78,6 +90,124 @@ def resolve_github(url: str) -> Resolution | None:
         markdown=gh["markdown"],
         title=heading.group(1).strip() if heading else gh["name"],
     )
+
+
+def youtube_id(url: str) -> str | None:
+    match = re.search(
+        r"(?:youtube\.com/(?:watch\?(?:[^#]*&)?v=|shorts/|live/)|youtu\.be/)"
+        r"([A-Za-z0-9_-]{11})",
+        url,
+    )
+    return match.group(1) if match else None
+
+
+def yt_dlp(args: list[str]) -> subprocess.CompletedProcess:
+    command = ["yt-dlp", "--no-warnings"]
+    if YOUTUBE_COOKIES.exists():
+        command += ["--cookies", str(YOUTUBE_COOKIES)]
+    return subprocess.run(command + args, capture_output=True, text=True)
+
+
+def resolve_youtube(url: str) -> Resolution | None:
+    """Markdown from metadata plus transcript; the video itself is
+    downloaded at archival quality with everything embedded in one mkv."""
+    vid = youtube_id(url)
+    if not vid:
+        return None
+    source = f"https://www.youtube.com/watch?v={vid}"
+    probe = yt_dlp(["--dump-json", "--skip-download", source])
+    if probe.returncode != 0:
+        raise RuntimeError(f"yt-dlp failed for {source}: {probe.stderr.strip()[:300]}")
+    meta = json.loads(probe.stdout)
+    upload = meta.get("upload_date") or ""
+    sections = [f"# {meta.get('title', '')}"]
+    if description := (meta.get("description") or "").strip():
+        sections.append("## Description\n\n" + description)
+    if transcript := youtube_transcript(source):
+        sections.append("## Transcript\n\n" + transcript)
+    extra = {"channel": meta.get("channel") or meta.get("uploader") or ""}
+    if duration := meta.get("duration_string"):
+        extra["duration"] = duration
+    return Resolution(
+        source=source,
+        content=source,
+        use_browser=False,
+        publish=f"{upload[:4]}-{upload[4:6]}-{upload[6:]}" if upload else None,
+        markdown="\n\n".join(sections) + "\n",
+        title=meta.get("title"),
+        extra=extra,
+        download_media=lambda folder, name: youtube_download(source, folder, name),
+    )
+
+
+def youtube_transcript(source: str) -> str:
+    """Manual or auto captions as plain text, via json3 subtitles."""
+    with tempfile.TemporaryDirectory() as tmp:
+        yt_dlp(
+            [
+                "--skip-download",
+                "--write-subs",
+                "--write-auto-subs",
+                "--sub-langs",
+                "en,en-orig",
+                "--sub-format",
+                "json3",
+                "-o",
+                f"{tmp}/subs",
+                source,
+            ]
+        )
+        files = sorted(Path(tmp).glob("*.json3"))
+        if not files:
+            return ""
+        return transcript_from_json3(files[0].read_text())
+
+
+def transcript_from_json3(text: str) -> str:
+    lines: list[str] = []
+    for event in json.loads(text).get("events", []):
+        line = "".join(seg.get("utf8", "") for seg in event.get("segs", []))
+        line = re.sub(r"\s+", " ", line).strip()
+        if line and (not lines or lines[-1] != line):
+            lines.append(line)
+    return "\n".join(lines)
+
+
+def youtube_download(source: str, folder: Path, name: str) -> None:
+    """Max-quality archival download: one mkv with thumbnail, metadata,
+    chapters, subtitles, and the info-json all embedded."""
+    result = yt_dlp(
+        [
+            "-f",
+            "bestvideo*+bestaudio/best",
+            "--merge-output-format",
+            "mkv",
+            # Also remux single-format downloads: info-json and other
+            # attachments only embed into mkv.
+            "--remux-video",
+            "mkv",
+            "--embed-thumbnail",
+            "--embed-metadata",
+            "--embed-chapters",
+            "--embed-subs",
+            "--embed-info-json",
+            "--sub-langs",
+            "en,en-orig",
+            "--write-auto-subs",
+            "--sponsorblock-mark",
+            "all",
+            "-o",
+            str(folder / f"{name}.%(ext)s"),
+            source,
+        ]
+    )
+    if result.returncode != 0:
+        print(f"video download failed: {result.stderr.strip()[:300]}")
+    # Subtitle files were only needed for embedding.
+    for stray in folder.glob(f"{name}*.vtt"):
+        stray.unlink()
+    for stray in folder.glob(f"{name}*.srt"):
+        stray.unlink()
 
 
 def resolve_default(url: str) -> Resolution:

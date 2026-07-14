@@ -24,7 +24,13 @@ from capture.extract import (
     published_date,
     slugify,
 )
-from capture.resolvers import Resolution, arxiv_id, hackernews_url, resolve
+from capture.resolvers import (
+    Resolution,
+    arxiv_id,
+    hackernews_url,
+    resolve,
+    youtube_id,
+)
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
@@ -60,11 +66,13 @@ def capture(url: str) -> Path:
     folder = REPO_ROOT / "data" / name
     folder.mkdir(parents=True, exist_ok=True)
 
-    artifact = folder / f"{name}.html"
     if scratch:
-        scratch.replace(artifact)
-    else:
-        artifact.write_text(artifact_html)
+        scratch.replace(folder / f"{name}.html")
+    elif artifact_html:
+        (folder / f"{name}.html").write_text(artifact_html)
+
+    if resolution.download_media:
+        resolution.download_media(folder, name)
 
     if resolution.pdf_url:
         subprocess.run(
@@ -91,7 +99,7 @@ def capture(url: str) -> Path:
         or not pandoc(resolution.content, markdown.name, folder)
         or thin(markdown)
     ):
-        pandoc(artifact.name, markdown.name, folder)
+        pandoc(f"{name}.html", markdown.name, folder)
 
     markdown.write_text(frontmatter(resolution, title, publish) + markdown.read_text())
     format_markdown(markdown)
@@ -106,6 +114,9 @@ def frontmatter(resolution: Resolution, title: str, publish: str | None) -> str:
         f"domain: {domain}",
         f"url: {resolution.source}",
     ]
+    for key, value in resolution.extra.items():
+        if value:
+            lines.append(f"{key}: {json.dumps(value)}")
     if resolution.archive:
         lines.append(f"archive: {resolution.archive}")
     if hn := hackernews_url(resolution.source):
@@ -189,6 +200,8 @@ def existing_capture(url: str) -> Path | None:
     target = normalize(url)
     if aid := arxiv_id(url):
         target = normalize(f"https://arxiv.org/abs/{aid}")
+    elif vid := youtube_id(url):
+        target = normalize(f"https://www.youtube.com/watch?v={vid}")
     for markdown in sorted((REPO_ROOT / "data").glob("*/*.md")):
         header = markdown.read_text(errors="replace")[:600]
         for line in header.splitlines():
