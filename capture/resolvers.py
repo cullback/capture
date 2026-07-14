@@ -122,13 +122,14 @@ def resolve_youtube(url: str) -> Resolution | None:
         raise RuntimeError(f"yt-dlp failed for {source}: {probe.stderr.strip()[:300]}")
     meta = json.loads(probe.stdout)
     upload = meta.get("upload_date") or ""
-    # Channel-as-subdomain groups videos by channel in data/, the way
-    # Substack authors appear as author.substack.com.
+    # youtube.com@handle: the canonical handle URL minus its slash.
+    # Keeps all videos sorted under the youtube.com prefix while still
+    # grouping by channel.
     handle = (meta.get("uploader_id") or "").removeprefix("@").lower()
     return Resolution(
         source=source,
         content=source,
-        domain=f"{handle}.youtube.com" if handle else None,
+        domain=f"youtube.com@{handle}" if handle else None,
         use_browser=False,
         publish=f"{upload[:4]}-{upload[4:6]}-{upload[6:]}" if upload else None,
         skip_markdown=True,
