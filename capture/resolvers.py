@@ -122,14 +122,15 @@ def resolve_youtube(url: str) -> Resolution | None:
         raise RuntimeError(f"yt-dlp failed for {source}: {probe.stderr.strip()[:300]}")
     meta = json.loads(probe.stdout)
     upload = meta.get("upload_date") or ""
-    # youtube.com@handle: the canonical handle URL minus its slash.
-    # Keeps all videos sorted under the youtube.com prefix while still
-    # grouping by channel.
+    # youtube.com⧸@handle: the canonical channel URL with U+29F8 big
+    # solidus standing in for the slash (the same substitution yt-dlp
+    # uses in filenames). Sorts under the youtube.com prefix and groups
+    # by channel.
     handle = (meta.get("uploader_id") or "").removeprefix("@").lower()
     return Resolution(
         source=source,
         content=source,
-        domain=f"youtube.com@{handle}" if handle else None,
+        domain=f"youtube.com⧸@{handle}" if handle else None,
         use_browser=False,
         publish=f"{upload[:4]}-{upload[4:6]}-{upload[6:]}" if upload else None,
         skip_markdown=True,
