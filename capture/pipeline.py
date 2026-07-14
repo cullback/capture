@@ -39,7 +39,9 @@ PANDOC_FORMAT = "html+tex_math_dollars+tex_math_single_backslash"
 
 def capture(url: str) -> Path:
     resolution = resolve(url)
-    domain = urlparse(resolution.source).netloc.removeprefix("www.")
+    domain = resolution.domain or urlparse(resolution.source).netloc.removeprefix(
+        "www."
+    )
 
     # single-file archives to a scratch path, since the folder name may
     # depend on metadata that only exists after rendering.

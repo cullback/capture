@@ -25,6 +25,7 @@ YOUTUBE_COOKIES = Path.home() / ".config" / "capture" / "youtube-cookies.txt"
 class Resolution:
     source: str  # identity URL: naming, frontmatter, HN lookup
     content: str  # URL to render and convert
+    domain: str | None = None  # folder-name domain override
     html: str = ""  # fetched identity page ("" = no HTML artifact)
     use_browser: bool = True  # single-file the content URL
     publish: str | None = None  # publish date, when the source knows it
@@ -121,9 +122,13 @@ def resolve_youtube(url: str) -> Resolution | None:
         raise RuntimeError(f"yt-dlp failed for {source}: {probe.stderr.strip()[:300]}")
     meta = json.loads(probe.stdout)
     upload = meta.get("upload_date") or ""
+    # Channel-as-subdomain groups videos by channel in data/, the way
+    # Substack authors appear as author.substack.com.
+    handle = (meta.get("uploader_id") or "").removeprefix("@").lower()
     return Resolution(
         source=source,
         content=source,
+        domain=f"{handle}.youtube.com" if handle else None,
         use_browser=False,
         publish=f"{upload[:4]}-{upload[4:6]}-{upload[6:]}" if upload else None,
         skip_markdown=True,
