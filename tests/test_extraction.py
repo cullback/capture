@@ -364,6 +364,15 @@ def test_arxiv_published_from_abs_page():
     assert arxiv_published(html) == "2026-03-27"
 
 
+def test_paywalled_detects_substack_marker():
+    from capture.extract import paywalled
+
+    # leetarxiv.substack.com: escaped marker inside the preload JSON
+    assert paywalled('{"post":{"audience\\":\\"only_paid\\"}}')
+    assert paywalled('"audience":"only_paid"')
+    assert not paywalled('"audience":"everyone"')
+
+
 def test_normalize_ignores_www_scheme_and_trailing_slash():
     assert normalize("https://www.example.com/a/b/") == normalize(
         "http://example.com/a/b"

@@ -252,6 +252,12 @@ def page_slug(url: str, html: str) -> str:
     return slugify(segments[-1]) if segments else "untitled"
 
 
+def paywalled(html: str) -> bool:
+    """Whether the page is a paywalled stub (Substack's audience marker;
+    the quotes appear backslash-escaped inside its preload JSON)."""
+    return bool(re.search(r'audience\\?":\\?"only_paid', html))
+
+
 def normalize(url: str) -> str:
     parsed = urlparse(url)
     base = parsed.netloc.removeprefix("www.") + parsed.path.rstrip("/")

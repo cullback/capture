@@ -22,6 +22,7 @@ from capture.extract import (
     normalize,
     page_slug,
     page_title,
+    paywalled,
     published_date,
     slugify,
 )
@@ -116,6 +117,8 @@ def capture(url: str) -> Path:
 
     markdown.write_text(frontmatter(resolution, title, publish) + markdown.read_text())
     format_markdown(markdown)
+    if paywalled(resolution.html):
+        print(f"warning: paywalled — captured only the free preview of {name}")
     return folder
 
 
@@ -130,6 +133,9 @@ def frontmatter(resolution: Resolution, title: str, publish: str | None) -> str:
     for key, value in resolution.extra.items():
         if value:
             lines.append(f"{key}: {json.dumps(value)}")
+    if paywalled(resolution.html):
+        # The capture is only the free preview.
+        lines.append("paywalled: true")
     if resolution.archive:
         lines.append(f"archive: {resolution.archive}")
     if hn := hackernews_url(resolution.source):
