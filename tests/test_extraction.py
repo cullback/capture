@@ -159,6 +159,17 @@ def test_title_strips_masthead_prefix():
     assert page_title(html, "eli.li") == "To the surprise of literally no one"
 
 
+def test_title_strips_og_site_name_suffix():
+    # dervis.de: og:site_name "Cem Dervis" matches neither the domain
+    # nor any masthead, but the site declares it explicitly
+    html = (
+        '<meta property="og:title" content="The Case for Physical Media'
+        ' Ownership | Cem Dervis">'
+        '<meta property="og:site_name" content="Cem Dervis">'
+    )
+    assert page_title(html, "dervis.de") == "The Case for Physical Media Ownership"
+
+
 def test_title_url_slug_disambiguates_wrapped_h1():
     # gameprogrammingpatterns.com: <title> is "H1 · Section · Site" and
     # the section is longer than the true title; the URL slug decides

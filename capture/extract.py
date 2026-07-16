@@ -63,14 +63,20 @@ def body_date(html: str) -> str | None:
     return None
 
 
-OG_TITLE_PATTERNS = [
-    # Both attribute orders, both quote styles, and property= or name=
-    # (eev.ee writes <meta name="og:title">).
-    r'(?:property|name)=["\']og:title["\'][^>]*content="([^"]+)"',
-    r"(?:property|name)=[\"']og:title[\"'][^>]*content='([^']+)'",
-    r'content="([^"]+)"[^>]*(?:property|name)=["\']og:title["\']',
-    r"content='([^']+)'[^>]*(?:property|name)=[\"']og:title[\"']",
-]
+def meta_content(html: str, prop: str) -> str:
+    """A meta tag's content: both attribute orders, both quote styles,
+    and property= or name= (eev.ee writes <meta name="og:title">)."""
+    for pattern in [
+        rf'(?:property|name)=["\']{prop}["\'][^>]*content="([^"]+)"',
+        rf"(?:property|name)=[\"']{prop}[\"'][^>]*content='([^']+)'",
+        rf'content="([^"]+)"[^>]*(?:property|name)=["\']{prop}["\']',
+        rf"content='([^']+)'[^>]*(?:property|name)=[\"']{prop}[\"']",
+    ]:
+        if match := re.search(pattern, html):
+            text = html_lib.unescape(match.group(1))
+            return re.sub(r"\s+", " ", text).strip()
+    return ""
+
 
 # Source priors: how much to trust each place a title can come from.
 OG_SCORE = 3.0
@@ -95,10 +101,10 @@ def page_title(html: str, domain: str = "", url: str = "") -> str:
         text = html_lib.unescape(re.sub(r"<[^>]+>", "", fragment))
         return re.sub(r"\s+", " ", text).strip()
 
-    og = next(
-        (clean(m.group(1)) for p in OG_TITLE_PATTERNS if (m := re.search(p, html))),
-        "",
-    )
+    og = meta_content(html, "og:title")
+    # The standard declaration of a site's display name, e.g. sites
+    # that title pages "Post Title | Site Name" (dervis.de).
+    og_site = meta_content(html, "og:site_name")
     headings = re.findall(r"<h([12])([^>]*)>(.*?)</h\1>", html, re.S)
     # A class-marked heading is the strongest heading signal: WordPress
     # puts a site-title h1 earlier in the DOM, and Obsidian Publish uses
@@ -131,13 +137,16 @@ def page_title(html: str, domain: str = "", url: str = "") -> str:
 
     def site_name(text: str) -> bool:
         return bool(text) and (
-            compact(text) in compact(domain) or compact(text) == compact(masthead)
+            compact(text) in compact(domain)
+            or compact(text) == compact(masthead)
+            or (bool(og_site) and compact(text) == compact(og_site))
         )
 
     scores: dict[str, float] = {}
 
     def add(text: str, score: float) -> None:
-        text = strip_site_prefix(text, masthead)
+        for name in (masthead, og_site):
+            text = strip_site_name(text, name)
         text = strip_site_suffix(text, domain)
         if not text:
             return
@@ -190,14 +199,18 @@ def slug_affinity(text: str, segment: str) -> bool:
     return difflib.SequenceMatcher(None, slug, segment).ratio() >= 0.6
 
 
-def strip_site_prefix(title: str, site_name: str) -> str:
-    """Drop a leading "Site Name - " segment matching the masthead."""
+def strip_site_name(title: str, site_name: str) -> str:
+    """Drop a leading "Site Name - " or trailing "- Site Name" segment
+    exactly matching a known site name (masthead or og:site_name)."""
     if not site_name:
         return title
     for separator in [" - ", " | ", " – ", " — ", " · ", ": "]:
         head, found, tail = title.partition(separator)
         if found and tail and compact(head) == compact(site_name):
             return tail.strip()
+        head, found, tail = title.rpartition(separator)
+        if found and head and compact(tail) == compact(site_name):
+            return head.strip()
     return title
 
 
