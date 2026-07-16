@@ -13,6 +13,7 @@ pytestmark = pytest.mark.live
 
 def test_capture_end_to_end():
     folder = capture("https://bernsteinbear.com/blog/toy-fuzzer/")
+    assert folder is not None
     assert (
         folder.name == "bernsteinbear.com - 2026-02-25 - a-fuzzer-for-the-toy-optimizer"
     )

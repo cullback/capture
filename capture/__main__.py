@@ -22,7 +22,8 @@ def main() -> None:
         print(f"already captured: {duplicate.name}")
         print("pass -f / --force to re-capture")
         return
-    print(capture(args.url))
+    if folder := capture(args.url):
+        print(folder)
 
 
 if __name__ == "__main__":

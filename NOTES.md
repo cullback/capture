@@ -65,7 +65,8 @@ If that stops, the fallback is a stealth browser with real cookies.
   posts split into multiple `<ol>` blocks, so numbering restarts
   mid-post on the live page too; the markdown mirrors the site. About
   30 lines of subscribe/share chrome leak into the markdown. Paywalled
-  posts would capture only the free preview.
+  posts (Substack's only_paid audience marker) are detected and
+  skipped without writing anything: only a preview is public.
 - **austinhenley.com**: no date metadata anywhere; the date appears
   only as `<small>8/31/2025</small>` body text, which forced the
   US-slash-date tier of `body_date`. Older posts lack og:title and

@@ -13,6 +13,7 @@ import json
 import re
 import shutil
 import subprocess
+import tempfile
 import unicodedata
 from datetime import date
 from pathlib import Path
@@ -39,26 +40,28 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 PANDOC_FORMAT = "html+tex_math_dollars+tex_math_single_backslash"
 
 
-def capture(url: str) -> Path:
+def capture(url: str) -> Path | None:
     resolution = resolve(url)
+    if paywalled(resolution.html):
+        print(f"skipped: paywalled, only a preview is public — {url}")
+        return None
     domain = resolution.domain or urlparse(resolution.source).netloc.removeprefix(
         "www."
     )
 
-    # single-file archives to a scratch path, since the folder name may
-    # depend on metadata that only exists after rendering. Some sites
-    # stall headless chromium's navigation forever (jaykmody.com) while
-    # serving plain fetches fine: degrade to the raw HTML as artifact.
-    scratch = None
+    # single-file archives to a temp path outside data/, since the
+    # folder name may depend on metadata that only exists after
+    # rendering. Some sites stall headless chromium's navigation forever
+    # (jaykmody.com) while serving plain fetches fine: degrade to the
+    # raw HTML as artifact.
     artifact_html = resolution.html
     if resolution.use_browser:
-        candidate = REPO_ROOT / "data" / ".capture.html"
-        candidate.unlink(missing_ok=True)
-        if single_file(resolution.content, candidate) and candidate.exists():
-            scratch = candidate
-            artifact_html = candidate.read_text()
-        else:
-            print("browser capture failed; archiving the plain fetch instead")
+        with tempfile.TemporaryDirectory() as tmp:
+            candidate = Path(tmp) / "capture.html"
+            if single_file(resolution.content, candidate) and candidate.exists():
+                artifact_html = candidate.read_text()
+            else:
+                print("browser capture failed; archiving the plain fetch instead")
 
     # Client-rendered pages (e.g. AoPS, Obsidian Publish) serve a shell:
     # take metadata from the rendered DOM when the raw HTML carries no
@@ -75,11 +78,27 @@ def capture(url: str) -> Path:
     # Folder and file names stay ASCII: transliterate, then drop the rest.
     name = unicodedata.normalize("NFKD", name).encode("ascii", "ignore").decode()
     folder = REPO_ROOT / "data" / name
+    fresh = not folder.exists()
     folder.mkdir(parents=True, exist_ok=True)
+    try:
+        return write_capture(resolution, folder, name, artifact_html, title, publish)
+    except BaseException:
+        # A failed capture leaves nothing behind — but never delete a
+        # pre-existing folder during a --force re-capture.
+        if fresh:
+            shutil.rmtree(folder, ignore_errors=True)
+        raise
 
-    if scratch:
-        scratch.replace(folder / f"{name}.html")
-    elif artifact_html:
+
+def write_capture(
+    resolution: Resolution,
+    folder: Path,
+    name: str,
+    artifact_html: str,
+    title: str,
+    publish: str | None,
+) -> Path:
+    if artifact_html:
         (folder / f"{name}.html").write_text(artifact_html)
 
     if resolution.download_media:
@@ -117,8 +136,6 @@ def capture(url: str) -> Path:
 
     markdown.write_text(frontmatter(resolution, title, publish) + markdown.read_text())
     format_markdown(markdown)
-    if paywalled(resolution.html):
-        print(f"warning: paywalled — captured only the free preview of {name}")
     return folder
 
 
@@ -133,9 +150,6 @@ def frontmatter(resolution: Resolution, title: str, publish: str | None) -> str:
     for key, value in resolution.extra.items():
         if value:
             lines.append(f"{key}: {json.dumps(value)}")
-    if paywalled(resolution.html):
-        # The capture is only the free preview.
-        lines.append("paywalled: true")
     if resolution.archive:
         lines.append(f"archive: {resolution.archive}")
     if hn := hackernews_url(resolution.source):
