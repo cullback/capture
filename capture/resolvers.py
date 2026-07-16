@@ -282,5 +282,15 @@ def hackernews_url(url: str) -> str | None:
     matches = [h for h in hits if normalize(h.get("url") or "") == normalize(url)]
     if not matches:
         return None
-    best = max(matches, key=lambda h: h.get("points") or 0)
-    return f"https://news.ycombinator.com/item?id={best['objectID']}"
+    return (
+        f"https://news.ycombinator.com/item?id={best_submission(matches)['objectID']}"
+    )
+
+
+def best_submission(matches: list[dict]) -> dict:
+    """The submission with the discussion: comments first, points to
+    tiebreak. Points measure visibility; comments measure the thread."""
+    return max(
+        matches,
+        key=lambda h: (h.get("num_comments") or 0, h.get("points") or 0),
+    )

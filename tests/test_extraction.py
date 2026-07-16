@@ -181,6 +181,16 @@ def test_slug_affinity_survives_truncated_slugs():
     assert not slug_affinity("Turtle Math", "c2532359h2760821-the-emoji-problem-part-i")
 
 
+def test_best_hn_submission_prefers_discussion():
+    from capture.resolvers import best_submission
+
+    drive_by = {"objectID": "1", "points": 50, "num_comments": 3}
+    debated = {"objectID": "2", "points": 30, "num_comments": 400}
+    assert best_submission([drive_by, debated]) == debated
+    tied = {"objectID": "3", "points": 80, "num_comments": 3}
+    assert best_submission([drive_by, tied]) == tied
+
+
 def test_youtube_id_from_url_forms():
     from capture.resolvers import youtube_id
 
