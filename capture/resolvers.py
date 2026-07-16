@@ -25,7 +25,7 @@ YOUTUBE_COOKIES = Path.home() / ".config" / "capture" / "youtube-cookies.txt"
 class Resolution:
     source: str  # identity URL: naming, frontmatter, HN lookup
     content: str  # URL to render and convert
-    domain: str | None = None  # folder-name domain override
+    domain: str | None = None  # folder-name leading segment(s) override
     html: str = ""  # fetched identity page ("" = no HTML artifact)
     use_browser: bool = True  # single-file the content URL
     publish: str | None = None  # publish date, when the source knows it
@@ -122,15 +122,14 @@ def resolve_youtube(url: str) -> Resolution | None:
         raise RuntimeError(f"yt-dlp failed for {source}: {probe.stderr.strip()[:300]}")
     meta = json.loads(probe.stdout)
     upload = meta.get("upload_date") or ""
-    # youtube.com⧸@handle: the canonical channel URL with U+29F8 big
-    # solidus standing in for the slash (the same substitution yt-dlp
-    # uses in filenames). Sorts under the youtube.com prefix and groups
-    # by channel.
+    # "youtube.com - @handle" as the leading folder segments: sorts
+    # under the youtube.com type prefix, then groups by channel.
     handle = (meta.get("uploader_id") or "").removeprefix("@").lower()
+    handle = re.sub(r"[^a-z0-9._-]", "", handle)  # handles can be non-ASCII
     return Resolution(
         source=source,
         content=source,
-        domain=f"youtube.com⧸@{handle}" if handle else None,
+        domain=f"youtube.com - @{handle}" if handle else None,
         use_browser=False,
         publish=f"{upload[:4]}-{upload[4:6]}-{upload[6:]}" if upload else None,
         skip_markdown=True,

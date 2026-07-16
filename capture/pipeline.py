@@ -13,6 +13,7 @@ import json
 import re
 import shutil
 import subprocess
+import unicodedata
 from datetime import date
 from pathlib import Path
 from urllib.parse import urlparse
@@ -65,6 +66,8 @@ def capture(url: str) -> Path:
     name_date = publish or date.today().isoformat()
     slug = slugify(title) or page_slug(resolution.source, meta_html)
     name = f"{domain} - {name_date} - {slug}"
+    # Folder and file names stay ASCII: transliterate, then drop the rest.
+    name = unicodedata.normalize("NFKD", name).encode("ascii", "ignore").decode()
     folder = REPO_ROOT / "data" / name
     folder.mkdir(parents=True, exist_ok=True)
 
