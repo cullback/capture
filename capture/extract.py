@@ -149,6 +149,8 @@ def page_title(html: str, domain: str = "", url: str = "") -> str:
     scores: dict[str, float] = {}
 
     def add(text: str, score: float) -> None:
+        # Some themes nest a date element inside the heading (mazzo.li).
+        text = re.sub(r"^\d{4}-\d{2}-\d{2}\s+", "", text)
         for name in (masthead, og_site):
             text = strip_site_name(text, name)
         text = strip_site_suffix(text, domain)

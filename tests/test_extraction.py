@@ -243,6 +243,16 @@ def test_github_blob_markdown(monkeypatch):
     assert module.github_markdown("https://github.com/o/r/issues/5") is None
 
 
+def test_title_drops_leading_date_from_heading():
+    # mazzo.li: <h1><em class="date">2022-06-01</em> How fast ...</h1>
+    html = (
+        "<title>How fast are Linux pipes anyway?</title>"
+        '<h1><em class="date"><span>2022-06-01</span></em>'
+        " How fast are Linux pipes anyway?</h1>"
+    )
+    assert page_title(html, "mazzo.li") == "How fast are Linux pipes anyway?"
+
+
 def test_title_empty_when_absent():
     assert page_title("<title></title>") == ""
 
