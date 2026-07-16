@@ -46,7 +46,7 @@
 {"folder": "borretti.me - 2025-01-10 - implementing-fsrs-in-100-lines", "title": "Implementing FSRS in 100 Lines", "publish": "2025-01-10"}
 {"folder": "borretti.me - 2025-04-13 - my-backup-infrastructure-2025-edition", "title": "My Backup Infrastructure, 2025 Edition", "publish": "2025-04-13"}
 {"folder": "borretti.me - 2025-10-05 - hashcards-a-plain-text-spaced-repetition-system", "title": "Hashcards: A Plain-Text Spaced Repetition System", "publish": "2025-10-05"}
-{"folder": "buttondown.com - 2025-09-10 - many-hard-leetcode-problems-are-easy-constraint-problems", "title": "Many Hard Leetcode Problems are Easy Constraint Problems", "publish": "2025-09-10"}
+{"folder": "buttondown.com - hillelwayne - 2025-09-10 - many-hard-leetcode-problems-are-easy-constraint-problems", "title": "Many Hard Leetcode Problems are Easy Constraint Problems", "publish": "2025-09-10"}
 {"folder": "campedersen.com - 2026-02-10 - the-singularity-will-occur-on-a-tuesday", "title": "The Singularity will Occur on a Tuesday", "publish": "2026-02-10"}
 {"folder": "cannoneyed.com - 2026-07-13 - isometric-nyc", "title": "/ Isometric NYC", "publish": null}
 {"folder": "chadnauseam.com - 2026-07-13 - a-calculator-app-anyone-could-make-that", "title": "\"A calculator app? Anyone could make that.\"", "publish": null}
@@ -104,9 +104,9 @@
 {"folder": "entropicthoughts.com - 2026-01-13 - you-need-a-kitchen-slide-rule", "title": "You Need A Kitchen Slide Rule", "publish": "2026-01-13"}
 {"folder": "gameprogrammingpatterns.com - 2026-07-13 - game-loop", "title": "Game Loop", "publish": null}
 {"folder": "girl.surgery - 2026-07-13 - chess-engines-do-weird-stuff", "title": "Chess Engines Do Weird Stuff", "publish": null}
-{"folder": "gist.github.com - 2019-07-25 - original-foreword-some-opinion", "title": "RISC-V.md", "publish": "2019-07-25"}
-{"folder": "github.com - 2024-05-10 - why-the-cordic-algorithm-lives-rent-free-in-my-head", "title": "githublog/2024/5/10/cordic.md at main · francisrstokes/githublog", "publish": "2024-05-11"}
-{"folder": "github.com - 2024-05-29 - everything-i-know-about-the-fast-inverse-square-root-algorithm", "title": "githublog/2024/5/29/fast-inverse-sqrt.md at main · francisrstokes/githublog", "publish": "2024-05-29"}
+{"folder": "gist.github.com - erincandescent - 2019-07-25 - original-foreword-some-opinion", "title": "RISC-V.md", "publish": "2019-07-25"}
+{"folder": "github.com - francisrstokes - 2024-05-10 - why-the-cordic-algorithm-lives-rent-free-in-my-head", "title": "githublog/2024/5/10/cordic.md at main · francisrstokes/githublog", "publish": "2024-05-11"}
+{"folder": "github.com - francisrstokes - 2024-05-29 - everything-i-know-about-the-fast-inverse-square-root-algorithm", "title": "githublog/2024/5/29/fast-inverse-sqrt.md at main · francisrstokes/githublog", "publish": "2024-05-29"}
 {"folder": "graphics.stanford.edu - 2005-05-05 - bit-twiddling-hacks", "title": "Bit Twiddling Hacks", "publish": "2005-05-05"}
 {"folder": "gregorygundersen.com - 2020-12-09 - why-shouldnt-i-invert-that-matrix", "title": "Why Shouldn't I Invert That Matrix?", "publish": "2020-12-09"}
 {"folder": "gregorygundersen.com - 2021-05-04 - portfolio-theory-why-diversification-matters", "title": "Portfolio Theory: Why Diversification Matters", "publish": "2021-05-04"}
@@ -199,3 +199,5 @@
 {"folder": "mechanicalmarkets.wordpress.com - 2018-08-13 - related-party-transactions-in-eth", "title": "Related Party Transactions In ETH?", "publish": "2018-08-13"}
 {"folder": "mechanicalmarkets.wordpress.com - 2020-01-27 - a-quick-note-about-the-fca-occasional-paper-on-latency-arbitrage", "title": "A Quick Note About the FCA Occasional Paper on “Latency Arbitrage”", "publish": "2020-01-27"}
 {"folder": "mechanicalmarkets.wordpress.com - 2023-06-07 - balloons-retail-order-auctions-citadel-and-antitrust-iex-and-ftx", "title": "Balloons, Retail Order Auctions, Citadel and Antitrust, IEX and FTX", "publish": "2023-06-07"}
+{"folder": "medium.com - digital-gamma-blog - 2018-06-08 - everything-you-thought-you-knew-about-spoofing-is-wrong", "title": "Everything You Thought You Knew About Spoofing is Wrong!", "publish": "2018-06-08"}
+{"folder": "medium.com - prooftrading - 2023-01-06 - the-sec-isnt-mad-at-pfof-theyre-just-disappointed", "title": "The SEC Isn’t Mad at PFOF. They’re Just Disappointed.", "publish": "2023-01-06"}

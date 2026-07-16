@@ -236,11 +236,29 @@ def test_github_blob_markdown(monkeypatch):
     gh = module.github_markdown("https://github.com/o/r/blob/main/2024/5/10/cordic.md")
     assert gh is not None
     assert gh["publish"] == "2024-05-10"
+    assert gh["domain"] == "github.com - o"
     assert (
         "https://raw.githubusercontent.com/o/r/main/2024/5/10/img.png"
         in (gh["markdown"])
     )
     assert module.github_markdown("https://github.com/o/r/issues/5") is None
+
+
+def test_path_identity_platforms():
+    from capture.resolvers import path_identity_domain
+
+    assert path_identity_domain(
+        "https://medium.com/digital-gamma-blog/everything-88cfcb5e83a"
+    ) == ("medium.com - digital-gamma-blog")
+    assert path_identity_domain("https://medium.com/@author/some-post-123abc") == (
+        "medium.com - @author"
+    )
+    assert path_identity_domain(
+        "https://buttondown.com/hillelwayne/archive/many-hard/"
+    ) == ("buttondown.com - hillelwayne")
+    # A bare profile page has no post segment; ordinary sites never match
+    assert path_identity_domain("https://medium.com/@author") is None
+    assert path_identity_domain("https://example.com/a/b") is None
 
 
 def test_title_drops_leading_date_from_heading():

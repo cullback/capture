@@ -86,6 +86,7 @@ def resolve_github(url: str) -> Resolution | None:
     return Resolution(
         source=url,
         content=url,
+        domain=gh["domain"],
         html=fetch_html(url),
         publish=gh["publish"],
         markdown=gh["markdown"],
@@ -176,6 +177,21 @@ def youtube_download(source: str, folder: Path, name: str) -> None:
         stray.unlink()
 
 
+# Platforms hosting many authors under one domain, with the author or
+# publication as the first path segment: fold it into the folder name
+# the way youtube does with @handles.
+PATH_IDENTITY_HOSTS = {"medium.com", "buttondown.com"}
+
+
+def path_identity_domain(url: str) -> str | None:
+    parsed = urlparse(url)
+    host = parsed.netloc.removeprefix("www.")
+    segments = [s for s in parsed.path.split("/") if s]
+    if host in PATH_IDENTITY_HOSTS and len(segments) >= 2:
+        return f"{host} - {segments[0]}"
+    return None
+
+
 def resolve_default(url: str) -> Resolution:
     """Plain pages, plus archive.today snapshots resolved to their
     original identity. Archive.today challenges browsers with a
@@ -185,6 +201,7 @@ def resolve_default(url: str) -> Resolution:
     return Resolution(
         source=source,
         content=url,
+        domain=path_identity_domain(source),
         html=html,
         archive=url if source != url else None,
         use_browser=source == url,
@@ -241,16 +258,23 @@ def github_markdown(url: str) -> dict | None:
             year, month, day = (int(g) for g in match.groups())
             if 1 <= month <= 12 and 1 <= day <= 31:
                 publish = f"{year}-{month:02d}-{day:02d}"
-        return {"markdown": text, "publish": publish, "name": Path(path).stem}
-    gist = re.search(r"gist\.github\.com/[^/]+/([a-f0-9]+)", url)
+        return {
+            "markdown": text,
+            "publish": publish,
+            "name": Path(path).stem,
+            "domain": f"github.com - {owner}",
+        }
+    gist = re.search(r"gist\.github\.com/([^/]+)/([a-f0-9]+)", url)
     if gist:
-        api = json.loads(fetch_html(f"https://api.github.com/gists/{gist.group(1)}"))
+        user, gist_id = gist.groups()
+        api = json.loads(fetch_html(f"https://api.github.com/gists/{gist_id}"))
         for filename, info in api.get("files", {}).items():
             if filename.lower().endswith((".md", ".markdown")):
                 return {
                     "markdown": info["content"],
                     "publish": (api.get("created_at") or "")[:10] or None,
                     "name": Path(filename).stem,
+                    "domain": f"gist.github.com - {user}",
                 }
     return None
 
