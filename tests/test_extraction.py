@@ -310,6 +310,16 @@ def test_body_date_ignores_html_comments():
     assert body_date(html) == "2022-01-18"
 
 
+def test_body_date_ignores_dates_inside_attributes():
+    # jaykmody.com: an ISO date in a link URL to someone else's post
+    # must not beat the visible "January 30, 2023" text
+    html = (
+        '<a href="https://lilianweng.github.io/posts/2018-06-24-attention/">'
+        "Attention</a><p>January 30, 2023</p>"
+    )
+    assert body_date(html) == "2023-01-30"
+
+
 def test_body_date_rejects_impossible_months():
     assert body_date("<p>Foobar 99, 2022</p>") is None
 

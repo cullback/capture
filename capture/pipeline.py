@@ -45,14 +45,19 @@ def capture(url: str) -> Path:
     )
 
     # single-file archives to a scratch path, since the folder name may
-    # depend on metadata that only exists after rendering.
+    # depend on metadata that only exists after rendering. Some sites
+    # stall headless chromium's navigation forever (jaykmody.com) while
+    # serving plain fetches fine: degrade to the raw HTML as artifact.
     scratch = None
+    artifact_html = resolution.html
     if resolution.use_browser:
-        scratch = REPO_ROOT / "data" / ".capture.html"
-        single_file(resolution.content, scratch)
-        artifact_html = scratch.read_text()
-    else:
-        artifact_html = resolution.html
+        candidate = REPO_ROOT / "data" / ".capture.html"
+        candidate.unlink(missing_ok=True)
+        if single_file(resolution.content, candidate) and candidate.exists():
+            scratch = candidate
+            artifact_html = candidate.read_text()
+        else:
+            print("browser capture failed; archiving the plain fetch instead")
 
     # Client-rendered pages (e.g. AoPS, Obsidian Publish) serve a shell:
     # take metadata from the rendered DOM when the raw HTML carries no
@@ -138,8 +143,8 @@ def frontmatter(resolution: Resolution, title: str, publish: str | None) -> str:
     return "\n".join(lines) + "\n\n"
 
 
-def single_file(url: str, output: Path) -> None:
-    subprocess.run(
+def single_file(url: str, output: Path) -> bool:
+    result = subprocess.run(
         [
             "single-file",
             "--browser-executable-path",
@@ -160,8 +165,8 @@ def single_file(url: str, output: Path) -> None:
             url,
             str(output),
         ],
-        check=True,
     )
+    return result.returncode == 0
 
 
 def pandoc(source: str, output: str, cwd: Path) -> bool:

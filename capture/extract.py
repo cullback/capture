@@ -46,16 +46,20 @@ def body_date(html: str) -> str | None:
     ISO can't be misread. This whole tier is a heuristic destined to be
     replaced by an LLM fallback.
     """
-    # Drop comments first: single-file stamps its own save date into one.
-    html = re.sub(r"<!--.*?-->", "", html, flags=re.S)
-    if match := re.search(r"\b(20\d{2})-(\d{2})-(\d{2})\b", html):
+    # Scan visible text only: drop comments (single-file stamps its own
+    # save date into one) and then all markup, so dates inside href
+    # attributes (links to OTHER dated posts, e.g. jaykmody.com linking
+    # 2018-06-24-attention) can't win.
+    text = re.sub(r"<!--.*?-->", "", html, flags=re.S)
+    text = re.sub(r"<[^>]+>", " ", text)
+    if match := re.search(r"\b(20\d{2})-(\d{2})-(\d{2})\b", text):
         return "-".join(match.groups())
     for pattern, order in [
         (r"\b([A-Za-z]{3,9})\.? (\d{1,2}),? (\d{4})\b", (2, 0, 1)),
         (r"\b(\d{1,2}) ([A-Za-z]{3,9})\.? (\d{4})\b", (2, 1, 0)),
-        (r">(\d{1,2})/(\d{1,2})/(\d{4})<", (2, 0, 1)),
+        (r"\b(\d{1,2})/(\d{1,2})/(\d{4})\b", (2, 0, 1)),
     ]:
-        for match in re.finditer(pattern, html):
+        for match in re.finditer(pattern, text):
             year, month, day = (match.group(i + 1) for i in order)
             month = MONTHS.get(month.lower(), month if month.isdigit() else None)
             if month and 1 <= int(month) <= 12 and 1 <= int(day) <= 31:
