@@ -12,31 +12,37 @@ import re
 import unicodedata
 from urllib.parse import urlparse
 
-DATE_PATTERNS = [
-    r'property=["\']article:published_time["\'][^>]*content=["\']([^"\']+)',
-    r'content=["\']([^"\']+)["\'][^>]*property=["\']article:published_time',
-    r'"datePublished"\s*:\s*"([^"]+)"',
-    r'<time[^>]*datetime=["\']([^"\']+)',
-]
-
 MONTHS = {m.lower(): i for i, m in enumerate(calendar.month_name) if m} | {
     m.lower(): i for i, m in enumerate(calendar.month_abbr) if m
 }
 
 
 def published_date(url: str, html: str) -> str | None:
-    """Publication date from the URL path or page metadata; None when unknown."""
+    """Publication date from the URL path or page metadata; None when unknown.
+
+    Trust order: a date the author put in the URL, then machine-readable
+    metadata (article:published_time meta, JSON-LD, <time>), then dates
+    visible in the page text.
+    """
     path = urlparse(url).path
     match = re.search(r"/(\d{4})/(\d{2})/(\d{2})(?:/|$)", path) or re.search(
         r"(\d{4})-(\d{2})-(\d{2})", path
     )
     if match:
         return "-".join(match.groups())
-    for pattern in DATE_PATTERNS:
-        match = re.search(pattern, html)
-        if match and re.match(r"\d{4}-\d{2}-\d{2}", match.group(1)):
-            return match.group(1)[:10]
+    for stamp in [
+        meta_content(html, "article:published_time"),
+        extract_first(html, r'"datePublished"\s*:\s*"([^"]+)"'),
+        extract_first(html, r'<time[^>]*datetime=["\']([^"\']+)'),
+    ]:
+        if re.match(r"\d{4}-\d{2}-\d{2}", stamp):
+            return stamp[:10]
     return body_date(html)
+
+
+def extract_first(html: str, pattern: str) -> str:
+    match = re.search(pattern, html)
+    return match.group(1) if match else ""
 
 
 def body_date(html: str) -> str | None:
@@ -138,12 +144,14 @@ def page_title(html: str, domain: str = "", url: str = "") -> str:
     )
     segments = [s for s in urlparse(url).path.split("/") if s]
     segment = slugify(segments[-1]) if segments else ""
+    # Known ways the site refers to itself: masthead h1 text and the
+    # declared og:site_name; the domain matches by containment.
+    site_names = [name for name in (masthead, og_site) if name]
 
     def site_name(text: str) -> bool:
         return bool(text) and (
             compact(text) in compact(domain)
-            or compact(text) == compact(masthead)
-            or (bool(og_site) and compact(text) == compact(og_site))
+            or any(compact(text) == compact(name) for name in site_names)
         )
 
     scores: dict[str, float] = {}
@@ -151,7 +159,7 @@ def page_title(html: str, domain: str = "", url: str = "") -> str:
     def add(text: str, score: float) -> None:
         # Some themes nest a date element inside the heading (mazzo.li).
         text = re.sub(r"^\d{4}-\d{2}-\d{2}\s+", "", text)
-        for name in (masthead, og_site):
+        for name in site_names:
             text = strip_site_name(text, name)
         text = strip_site_suffix(text, domain)
         if not text:
