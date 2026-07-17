@@ -1,6 +1,7 @@
 """Shared resolver primitives: the Resolution contract and the fetcher."""
 
 import subprocess
+import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -20,16 +21,20 @@ class Resolution:
     title: str | None = None  # title override
     pdf_url: str | None = None  # extra artifact to download
     extra: dict[str, str] = field(default_factory=dict)  # frontmatter additions
+    fallback_date: str | None = None  # folder date when no publish date exists
     download_media: Callable[[Path, str], None] | None = None  # (folder, name)
 
 
-def fetch_html(url: str) -> str:
+def fetch_html(url: str, retry: bool = True) -> str:
     # curl rather than urllib: WAFs (e.g. AoPS) block urllib's client
     # fingerprint no matter what headers it sends.
     result = subprocess.run(
         [
             "curl",
             "-sL",
+            # Wayback id_ snapshots replay original responses verbatim,
+            # including gzip bodies.
+            "--compressed",
             "--max-time",
             "120",
             "-A",
@@ -40,9 +45,12 @@ def fetch_html(url: str) -> str:
         ],
         check=True,
         capture_output=True,
-        text=True,
     )
-    body, _, status = result.stdout.rpartition("\n")
+    body, _, status = result.stdout.decode("utf-8", errors="replace").rpartition("\n")
+    if status.startswith("5") and retry:
+        # Server errors are often transient (wayback 500s under load).
+        time.sleep(3)
+        return fetch_html(url, retry=False)
     if status.startswith(("4", "5")):
         # Error pages (404s, block pages) must not be archived as content.
         raise FetchError(int(status), url)

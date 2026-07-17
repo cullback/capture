@@ -163,6 +163,7 @@
 {"folder": "mazzo.li - 2022-06-01 - how-fast-are-linux-pipes-anyway", "title": "How fast are Linux pipes anyway?", "publish": "2022-06-01"}
 {"folder": "mcyoung.xyz - 2025-03-11 - the-art-of-formatting-code", "title": "The Art of Formatting Code", "publish": "2025-03-11"}
 {"folder": "mcyoung.xyz - 2025-10-21 - why-ssa", "title": "Why SSA?", "publish": "2025-10-21"}
+{"folder": "meanderful.blogspot.com - 2018-01-24 - the-accidental-hft-firm", "title": "The accidental HFT firm", "publish": "2018-01-24"}
 {"folder": "mechanicalmarkets.wordpress.com - 2015-01-13 - finding-low-alpha-orders-identifying-trader-type-pt-1", "title": "Finding Low-Alpha Orders: Identifying Trader Type Pt. 1", "publish": "2015-01-13"}
 {"folder": "mechanicalmarkets.wordpress.com - 2015-01-20 - creating-an-hft-strategy-identifying-trader-type-pt-2", "title": "Creating an HFT Strategy: Identifying Trader Type Pt. 2", "publish": "2015-01-20"}
 {"folder": "mechanicalmarkets.wordpress.com - 2015-02-09 - order-size-in-the-hft-era-identifying-trader-type-pt-3", "title": "Order Size in the HFT Era: Identifying Trader Type Pt. 3", "publish": "2015-02-09"}
@@ -208,11 +209,13 @@
 {"folder": "nunosempere.com - 2024-02-25 - a-bayesian-nerd-snipe", "title": "A Bayesian Nerd-Snipe", "publish": "2024-02-25"}
 {"folder": "nunosempere.com - 2024-06-02 - simple-electoral-college-simulation", "title": "Simple electoral college simulation", "publish": "2024-06-02"}
 {"folder": "nunosempere.com - 2024-09-10 - whats-the-chance-your-startup-will-succeed", "title": "What's the chance your startup will succeed?", "publish": "2024-09-10"}
+{"folder": "ofb.net - 2016-08-19 - iocaine-powder", "title": "Iocaine Powder", "publish": null}
 {"folder": "outlookzen.com - 2018-10-27 - what-drives-stock-market-returns", "title": "What drives Stock Market Returns?", "publish": "2018-10-27"}
 {"folder": "overreacted.io - 2025-05-02 - functional-html", "title": "Functional HTML", "publish": "2025-05-02"}
 {"folder": "pepijndevos.nl - 2023-07-15 - chatlzma", "title": "ChatLZMA", "publish": "2023-07-15"}
 {"folder": "pepijndevos.nl - 2024-04-14 - earth-could-be-round-earth-could-be-flat-earth-could-have-violet-sky", "title": "Earth could be round, Earth could be flat, Earth could have violet sky", "publish": "2024-04-14"}
 {"folder": "performativebafflement.substack.com - 2025-01-12 - the-case-for-testosterone", "title": "The case for Testosterone", "publish": "2025-01-12"}
+{"folder": "playfuljs.com - 2014-06-17 - a-first-person-engine-in-265-lines", "title": "A first-person engine in 265 lines", "publish": null}
 {"folder": "predr.ag - 2022-02-03 - compiler-adventures-part-1-no-op-instructions", "title": "Compiler Adventures, part 1: No-op Instructions", "publish": "2022-02-03"}
 {"folder": "predr.ag - 2022-02-17 - compiler-adventures-part-2-constant-propagation", "title": "Compiler Adventures, part 2: Constant Propagation", "publish": "2022-02-17"}
 {"folder": "predr.ag - 2022-05-17 - compiler-adventures-part-3-value-numbering", "title": "Compiler Adventures, part 3: Value Numbering", "publish": "2022-05-17"}
@@ -233,3 +236,33 @@
 {"folder": "reasonabledeviations.com - 2022-01-24 - how-i-read-books", "title": "How I Read Books", "publish": "2022-01-24"}
 {"folder": "ridiculousfish.com - 2011-10-19 - labor-of-division-episode-iii-faster-unsigned-division-by-constants", "title": "Labor of Division (Episode III): Faster Unsigned Division by Constants", "publish": "2011-10-19"}
 {"folder": "sam.zeloof.xyz - 2021-08-12 - second-ic", "title": "Second IC :)", "publish": "2021-08-12"}
+{"folder": "sandboxspirit.com - 2026-01-29 - art-of-roads-in-games", "title": "Art of Roads in Games", "publish": "2026-01-29"}
+{"folder": "sarahconstantin.substack.com - 2024-09-13 - the-great-data-integration-schlep", "title": "The Great Data Integration Schlep", "publish": "2024-09-13"}
+{"folder": "saurabhs.org - 2026-07-17 - macos-tips-tricks", "title": "macOS Tips & Tricks", "publish": null}
+{"folder": "scottcondie.github.io - 2017-07-11 - orderbooks-and-asset-pricing", "title": "Orderbooks and Asset Pricing¶", "publish": "2017-07-11"}
+{"folder": "scottcondie.github.io - 2026-07-17 - the-lucas-tree-model-of-asset-pricing", "title": "The Lucas Tree Model of Asset Pricing¶", "publish": null}
+{"folder": "signalsmith-audio.co.uk - 2022-02-10 - constant-time-peak-hold", "title": "Constant-time peak-hold", "publish": "2022-02-10"}
+{"folder": "simone.org - 2025-04-02 - what-if-we-made-advertising-illegal", "title": "What If We Made Advertising Illegal?", "publish": "2025-04-02"}
+{"folder": "simonwillison.net - 2025-01-02 - i-still-dont-think-companies-serve-you-ads-based-on-spying-through-your-microphone", "title": "I still don’t think companies serve you ads based on spying through your microphone", "publish": "2025-01-02"}
+{"folder": "sive.rs - 2026-07-17 - tech-independence", "title": "Tech Independence", "publish": null}
+{"folder": "smu160.github.io - 2026-03-06 - missile-defense-is-np-complete-an-optimization-odyssey", "title": "Missile Defense is NP-Complete | An Optimization Odyssey", "publish": "2026-03-06"}
+{"folder": "snf.github.io - 2019-02-13 - shared-ptr-t-the-not-always-atomic-reference-counted-smart-pointer", "title": "shared_ptr<T>: the (not always) atomic reference counted smart pointer", "publish": "2019-02-13"}
+{"folder": "splittinginfinity.substack.com - 2025-06-10 - replace-income-taxes-with-better-ones", "title": "Replace income taxes with better ones", "publish": "2025-06-10"}
+{"folder": "stephango.com - 2016-10-20 - 40-questions-to-ask-yourself-every-year", "title": "40 questions to ask yourself every year", "publish": "2016-10-20"}
+{"folder": "stephango.com - 2022-01-05 - 40-questions-to-ask-yourself-every-decade", "title": "40 questions to ask yourself every decade", "publish": "2022-01-05"}
+{"folder": "stephenfollows.com - 2025-02-27 - was-harvey-weinstein-thanked-more-often-than-god-at-the-oscars", "title": "Was Harvey Weinstein thanked more often than God at the Oscars?", "publish": "2025-02-27"}
+{"folder": "sublevelgames.github.io - 2025-07-20 - solving-a-childhood-mystery-how-basic-games-learned-to-win", "title": "♙Solving a Childhood Mystery: How BASIC Games Learned to Win", "publish": "2025-07-20"}
+{"folder": "superposer.substack.com - 2024-10-28 - gravity-is-not-a-force", "title": "Gravity is not a force", "publish": "2024-10-28"}
+{"folder": "susam.net - 2025-11-20 - fizz-buzz-with-cosines", "title": "Fizz Buzz with Cosines", "publish": "2025-11-20"}
+{"folder": "tamino.wordpress.com - 2018-08-08 - usa-temperature-can-i-sucker-you", "title": "USA Temperature: can I sucker you?", "publish": "2018-08-08"}
+{"folder": "taylor.town - 2026-03-01 - lil-fun-langs-guts", "title": "Lil' Fun Langs' Guts", "publish": "2026-03-01"}
+{"folder": "theaxolot.wordpress.com - 2024-05-08 - dont-refactor-like-uncle-bob-please", "title": "Don’t Refactor Like Uncle Bob. Please", "publish": "2024-05-08"}
+{"folder": "thepalindrome.org - 2023-01-09 - matrices-and-graphs", "title": "Matrices and graphs", "publish": "2023-01-09"}
+{"folder": "thezvi.substack.com - 2018-10-15 - the-kelly-criterion", "title": "The Kelly Criterion", "publish": "2018-10-15"}
+{"folder": "thezvi.substack.com - 2025-08-15 - spending-too-much-time-at-airports", "title": "Spending Too Much Time At Airports", "publish": "2025-08-15"}
+{"folder": "timsh.org - 2025-04-17 - everyone-knows-your-location-part-2-try-it-yourself-and-share-the-results", "title": "Everyone knows your location, Part 2: try it yourself and share the results", "publish": "2025-04-17"}
+{"folder": "tripsitter.substack.com - 2023-07-13 - breath-of-god-tripping-on-xenon-gas", "title": "Breath of God: Tripping on Xenon Gas", "publish": "2023-07-13"}
+{"folder": "usefulfictions.substack.com - 2025-07-23 - how-to-increase-your-surface-area-for-luck", "title": "How to increase your surface area for luck", "publish": "2025-07-23"}
+{"folder": "vercel.com - 2026-01-27 - agents-md-outperforms-skills-in-our-agent-evals", "title": "AGENTS.md outperforms skills in our agent evals", "publish": "2026-01-27"}
+{"folder": "veyronb.wordpress.com - 2011-11-22 - in-defense-of-liquidity-rebates-and-other-structures-in-the-equity-markets", "title": "In Defense of Liquidity Rebates and other Structures in the Equity Markets", "publish": "2011-11-22"}
+{"folder": "wassimulator.com - 2026-07-17 - programming-vehicles-in-games", "title": "Programming Vehicles in Games", "publish": "2021-05-15"}

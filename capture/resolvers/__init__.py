@@ -26,9 +26,16 @@ from capture.resolvers.reddit import (
     reddit_thread,
     resolve_reddit,
 )
+from capture.resolvers.wayback import resolve_wayback, wayback_snapshot
 from capture.resolvers.youtube import resolve_youtube, youtube_id
 
-RESOLVERS = [resolve_arxiv, resolve_github, resolve_youtube, resolve_reddit]
+RESOLVERS = [
+    resolve_arxiv,
+    resolve_github,
+    resolve_youtube,
+    resolve_reddit,
+    resolve_wayback,
+]
 
 
 def resolve(url: str) -> Resolution:
@@ -56,6 +63,8 @@ __all__ = [
     "resolve_default",
     "resolve_github",
     "resolve_reddit",
+    "resolve_wayback",
     "resolve_youtube",
+    "wayback_snapshot",
     "youtube_id",
 ]

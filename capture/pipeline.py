@@ -34,6 +34,7 @@ from capture.resolvers import (
     arxiv_id,
     reddit_thread,
     resolve,
+    wayback_snapshot,
     youtube_id,
 )
 
@@ -84,7 +85,7 @@ def capture(url: str) -> Path | None:
     meta_html = resolution.html if informative else artifact_html
     title = resolution.title or page_title(meta_html, domain, resolution.source)
     publish = resolution.publish or published_date(resolution.source, meta_html)
-    name_date = publish or date.today().isoformat()
+    name_date = publish or resolution.fallback_date or date.today().isoformat()
     slug = slugify(title) or page_slug(resolution.source, meta_html)
     name = f"{domain} - {name_date} - {slug}"
     # Folder and file names stay ASCII: transliterate, then drop the rest.
@@ -142,7 +143,7 @@ def write_capture(
     elif (
         not resolution.use_browser
         or not pandoc(resolution.content, markdown.name, folder)
-        or thin(markdown)
+        or junk_conversion(markdown)
     ):
         pandoc(f"{name}.html", markdown.name, folder)
 
@@ -254,6 +255,14 @@ def thin(markdown: Path) -> bool:
     return not markdown.exists() or len(markdown.read_text().split()) < 150
 
 
+def junk_conversion(markdown: Path) -> bool:
+    """A conversion that fetched an interstitial rather than the page:
+    too short, or wayback's banner menus instead of content."""
+    if thin(markdown):
+        return True
+    return "Expand web menu" in markdown.read_text(errors="replace")[:3000]
+
+
 def format_markdown(markdown: Path) -> None:
     # Via stdin with a path outside data/, since dprint.json excludes
     # data/ to keep repo-wide `just format` off the captures.
@@ -283,6 +292,8 @@ def existing_capture(url: str) -> Path | None:
         target = normalize(
             f"https://www.reddit.com/r/{thread[0]}/comments/{thread[1]}/"
         )
+    elif snapshot := wayback_snapshot(url):
+        target = normalize(snapshot[1])
     for markdown in sorted((REPO_ROOT / "data").glob("*/*.md")):
         header = markdown.read_text(errors="replace")[:600]
         for line in header.splitlines():

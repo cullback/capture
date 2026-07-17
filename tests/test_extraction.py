@@ -312,6 +312,22 @@ def test_refused_fetch_falls_back_to_browser_but_missing_stays_fatal(monkeypatch
         resolve_default("https://predictionmarkets.miraheze.org/wiki/Gone")
 
 
+def test_wayback_snapshot_url_forms():
+    from capture.resolvers import wayback_snapshot
+
+    assert wayback_snapshot(
+        "https://web.archive.org/web/20140617202930/http://www.playfuljs.com/a-first-person-engine-in-265-lines/"
+    ) == (
+        "20140617202930",
+        "http://www.playfuljs.com/a-first-person-engine-in-265-lines/",
+    )
+    # id_ form (raw original bytes) parses to the same snapshot
+    assert wayback_snapshot(
+        "https://web.archive.org/web/20160819141717id_/http://www.ofb.net/~egnor/iocaine.html"
+    ) == ("20160819141717", "http://www.ofb.net/~egnor/iocaine.html")
+    assert wayback_snapshot("https://web.archive.org/") is None
+
+
 def test_path_identity_platforms():
     from capture.resolvers import path_identity_domain
 
