@@ -15,9 +15,10 @@ import shutil
 import subprocess
 import tempfile
 import unicodedata
+import urllib.request
 from datetime import date
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import quote, urlparse
 
 from capture.extract import (
     normalize,
@@ -30,7 +31,6 @@ from capture.extract import (
 from capture.resolvers import (
     Resolution,
     arxiv_id,
-    hackernews_url,
     reddit_thread,
     resolve,
     youtube_id,
@@ -162,6 +162,34 @@ def frontmatter(resolution: Resolution, title: str, publish: str | None) -> str:
         lines.append(f"publish_date: {publish}")
     lines.append("---")
     return "\n".join(lines) + "\n\n"
+
+
+def hackernews_url(url: str) -> str | None:
+    """Best submission of this URL, via the Algolia search API."""
+    api = (
+        "https://hn.algolia.com/api/v1/search"
+        f"?query={quote(url, safe='')}&restrictSearchableAttributes=url&hitsPerPage=20"
+    )
+    try:
+        with urllib.request.urlopen(api, timeout=10) as response:
+            hits = json.load(response)["hits"]
+    except OSError:
+        return None
+    matches = [h for h in hits if normalize(h.get("url") or "") == normalize(url)]
+    if not matches:
+        return None
+    return (
+        f"https://news.ycombinator.com/item?id={best_submission(matches)['objectID']}"
+    )
+
+
+def best_submission(matches: list[dict]) -> dict:
+    """The submission with the discussion: comments first, points to
+    tiebreak. Points measure visibility; comments measure the thread."""
+    return max(
+        matches,
+        key=lambda h: (h.get("num_comments") or 0, h.get("points") or 0),
+    )
 
 
 def single_file(url: str, output: Path) -> bool:

@@ -206,7 +206,7 @@ def test_slug_affinity_survives_truncated_slugs():
 
 
 def test_best_hn_submission_prefers_discussion():
-    from capture.resolvers import best_submission
+    from capture.pipeline import best_submission
 
     drive_by = {"objectID": "1", "points": 50, "num_comments": 3}
     debated = {"objectID": "2", "points": 30, "num_comments": 400}
@@ -243,9 +243,10 @@ def test_existing_capture_resolves_youtube_forms(tmp_path, monkeypatch):
 
 
 def test_github_blob_markdown(monkeypatch):
+    import capture.resolvers.base as base
     import capture.resolvers as module
 
-    monkeypatch.setattr(module, "fetch_html", lambda u: "# CORDIC\n![d](img.png)")
+    monkeypatch.setattr(base, "fetch_html", lambda u: "# CORDIC\n![d](img.png)")
     gh = module.github_markdown("https://github.com/o/r/blob/main/2024/5/10/cordic.md")
     assert gh is not None
     assert gh["publish"] == "2024-05-10"
