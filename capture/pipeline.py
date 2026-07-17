@@ -31,6 +31,7 @@ from capture.resolvers import (
     Resolution,
     arxiv_id,
     hackernews_url,
+    reddit_thread,
     resolve,
     youtube_id,
 )
@@ -239,6 +240,10 @@ def existing_capture(url: str) -> Path | None:
     target = normalize(url)
     if aid := arxiv_id(url):
         target = normalize(f"https://arxiv.org/abs/{aid}")
+    elif thread := reddit_thread(url):
+        target = normalize(
+            f"https://www.reddit.com/r/{thread[0]}/comments/{thread[1]}/"
+        )
     for markdown in sorted((REPO_ROOT / "data").glob("*/*.md")):
         header = markdown.read_text(errors="replace")[:600]
         for line in header.splitlines():

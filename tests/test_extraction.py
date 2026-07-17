@@ -257,6 +257,39 @@ def test_github_blob_markdown(monkeypatch):
     assert module.github_markdown("https://github.com/o/r/issues/5") is None
 
 
+def test_reddit_thread_url_forms():
+    from capture.resolvers import reddit_thread
+
+    for url in [
+        "https://old.reddit.com/r/SlateStarCodex/comments/1il904v/crazy_nonobvious/",
+        "https://www.reddit.com/r/slatestarcodex/comments/1il904v/",
+        "https://reddit.com/r/slatestarcodex/comments/1il904v",
+    ]:
+        assert reddit_thread(url) == ("slatestarcodex", "1il904v")
+    assert reddit_thread("https://old.reddit.com/r/slatestarcodex/") is None
+
+
+def test_reddit_markdown_nests_comments_by_score():
+    from capture.resolvers import reddit_markdown
+
+    post = {
+        "id": "p1",
+        "title": "T",
+        "author": "op",
+        "subreddit": "test",
+        "selftext": "body",
+        "num_comments": 3,
+    }
+    comments = [
+        {"id": "a", "parent_id": "t3_p1", "author": "low", "score": 1, "body": "meh"},
+        {"id": "b", "parent_id": "t3_p1", "author": "high", "score": 9, "body": "top"},
+        {"id": "c", "parent_id": "t1_b", "author": "kid", "score": 2, "body": "reply"},
+    ]
+    md = reddit_markdown(post, comments)
+    assert md.index("u/high") < md.index("u/low")  # score order
+    assert "> > **u/kid** (2 points)\n> > reply" in md  # nested under b
+
+
 def test_path_identity_platforms():
     from capture.resolvers import path_identity_domain
 

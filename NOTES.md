@@ -123,6 +123,19 @@ still archives the rendered page as the .html artifact.
   dodging the data/ exclude). The exclude exists because repo-wide
   `just format` once reformatted 67MB of captures and took minutes.
 
+## reddit.com: first full fetch-stack defeat, solved by Arctic Shift
+
+Reddit blocks curl, urllib, and de-automated headless chromium alike
+("blocked by network security") — the first site to defeat every
+fetcher. Instead of escalating to cookies or a stealth browser, the
+resolver uses the Arctic Shift archive (the Pushshift successor):
+public JSON with comment bodies already in markdown. Threads render as
+score-sorted nested blockquotes; scores reflect archive time, not
+live. Pagination needs sort=asc — the API's default ordering
+interleaves dates, so a created-time cursor silently skips comments.
+No HTML artifact exists for these captures. If Arctic Shift ever goes
+the way of Pushshift, this becomes the zendriver/cookies trigger again.
+
 ## First heuristic defeat: blog.vortan.dev
 
 The ematching post publishes no date at all: none in the page, none in
