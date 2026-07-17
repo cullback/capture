@@ -291,6 +291,27 @@ def test_reddit_markdown_nests_comments_by_score():
     assert "> > **u/kid** (2 points)\n> > reply" in md  # nested under b
 
 
+def test_refused_fetch_falls_back_to_browser_but_missing_stays_fatal(monkeypatch):
+    import pytest
+
+    import capture.resolvers.base as base
+    from capture.resolvers.default import resolve_default
+
+    def refuse(url):
+        raise base.FetchError(429, url)
+
+    monkeypatch.setattr(base, "fetch_html", refuse)
+    resolution = resolve_default("https://quarter--mile.com/post")
+    assert resolution.use_browser and resolution.html == ""
+
+    def missing(url):
+        raise base.FetchError(404, url)
+
+    monkeypatch.setattr(base, "fetch_html", missing)
+    with pytest.raises(base.FetchError):
+        resolve_default("https://predictionmarkets.miraheze.org/wiki/Gone")
+
+
 def test_path_identity_platforms():
     from capture.resolvers import path_identity_domain
 

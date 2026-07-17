@@ -20,8 +20,10 @@ def resolve_default(url: str) -> Resolution:
     captcha, so the plain fetch is the best artifact we can get there."""
     try:
         html = base.fetch_html(url)
-    except RuntimeError:
-        # Some sites refuse plain clients but serve real browsers
+    except base.FetchError as error:
+        if not error.refused:
+            raise  # 404s and server errors stay fatal (miraheze)
+        # Sites that refuse plain clients may serve real browsers
         # (quarter--mile.com 429s curl): let the browser supply
         # everything, including metadata.
         return Resolution(source=url, content=url)

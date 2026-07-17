@@ -45,5 +45,17 @@ def fetch_html(url: str) -> str:
     body, _, status = result.stdout.rpartition("\n")
     if status.startswith(("4", "5")):
         # Error pages (404s, block pages) must not be archived as content.
-        raise RuntimeError(f"HTTP {status} for {url}")
+        raise FetchError(int(status), url)
     return body
+
+
+class FetchError(RuntimeError):
+    def __init__(self, status: int, url: str):
+        super().__init__(f"HTTP {status} for {url}")
+        self.status = status
+
+    @property
+    def refused(self) -> bool:
+        """Client rejected (a real browser may still succeed), as opposed
+        to content that is missing or a server that is broken."""
+        return self.status in (401, 403, 429)
