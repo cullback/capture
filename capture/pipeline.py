@@ -63,6 +63,12 @@ def capture(url: str) -> Path | None:
                 artifact_html = candidate.read_text()
             else:
                 print("browser capture failed; archiving the plain fetch instead")
+    if (
+        not artifact_html
+        and resolution.markdown is None
+        and not resolution.skip_markdown
+    ):
+        raise RuntimeError(f"every fetcher failed for {url}")
 
     # Client-rendered pages (e.g. AoPS, Obsidian Publish) serve a shell:
     # take metadata from the rendered DOM when the raw HTML carries no

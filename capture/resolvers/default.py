@@ -18,7 +18,13 @@ def resolve_default(url: str) -> Resolution:
     """Plain pages, plus archive.today snapshots resolved to their
     original identity. Archive.today challenges browsers with a
     captcha, so the plain fetch is the best artifact we can get there."""
-    html = base.fetch_html(url)
+    try:
+        html = base.fetch_html(url)
+    except RuntimeError:
+        # Some sites refuse plain clients but serve real browsers
+        # (quarter--mile.com 429s curl): let the browser supply
+        # everything, including metadata.
+        return Resolution(source=url, content=url)
     source = original_url(url, html)
     return Resolution(
         source=source,
