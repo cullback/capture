@@ -416,6 +416,12 @@ def test_body_date_ignores_dates_inside_attributes():
     assert body_date(html) == "2023-01-30"
 
 
+def test_body_date_with_ordinal_suffix():
+    # ridiculousfish.com: "October 19th, 2011"
+    assert body_date("<p>October 19th, 2011</p>") == "2011-10-19"
+    assert body_date("<p>3rd May 2020</p>") == "2020-05-03"
+
+
 def test_body_date_rejects_impossible_months():
     assert body_date("<p>Foobar 99, 2022</p>") is None
 

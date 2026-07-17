@@ -61,8 +61,9 @@ def body_date(html: str) -> str | None:
     if match := re.search(r"\b(20\d{2})-(\d{2})-(\d{2})\b", text):
         return "-".join(match.groups())
     for pattern, order in [
-        (r"\b([A-Za-z]{3,9})\.? (\d{1,2}),? (\d{4})\b", (2, 0, 1)),
-        (r"\b(\d{1,2}) ([A-Za-z]{3,9})\.? (\d{4})\b", (2, 1, 0)),
+        # Ordinal suffixes included: "October 19th, 2011" (ridiculousfish)
+        (r"\b([A-Za-z]{3,9})\.? (\d{1,2})(?:st|nd|rd|th)?,? (\d{4})\b", (2, 0, 1)),
+        (r"\b(\d{1,2})(?:st|nd|rd|th)? ([A-Za-z]{3,9})\.? (\d{4})\b", (2, 1, 0)),
         (r"\b(\d{1,2})/(\d{1,2})/(\d{4})\b", (2, 0, 1)),
     ]:
         for match in re.finditer(pattern, text):
