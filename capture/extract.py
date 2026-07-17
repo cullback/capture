@@ -267,6 +267,22 @@ def page_slug(url: str, html: str) -> str:
     return slugify(segments[-1]) if segments else "untitled"
 
 
+CHALLENGE_MARKERS = [
+    "Checking your browser",
+    "Just a moment...",
+    "Verifying you are human",
+    "Enable JavaScript and cookies to continue",
+    "You've been blocked by network security",
+]
+
+
+def challenge_page(html: str) -> bool:
+    """Whether the page is a bot-check interstitial served with HTTP 200
+    (steamdb.info, Cloudflare's Just a moment)."""
+    head = html[:4000]
+    return any(marker in head for marker in CHALLENGE_MARKERS)
+
+
 def paywalled(html: str) -> bool:
     """Whether the page is a paywalled stub (Substack's audience marker;
     the quotes appear backslash-escaped inside its preload JSON)."""

@@ -21,6 +21,7 @@ from pathlib import Path
 from urllib.parse import quote, urlparse
 
 from capture.extract import (
+    challenge_page,
     normalize,
     page_slug,
     page_title,
@@ -69,6 +70,10 @@ def capture(url: str) -> Path | None:
         and not resolution.skip_markdown
     ):
         raise RuntimeError(f"every fetcher failed for {url}")
+    if resolution.markdown is None and challenge_page(artifact_html):
+        # Bot checks served with HTTP 200 (steamdb) dodge the status
+        # check; nothing real was fetched.
+        raise RuntimeError(f"bot-check interstitial instead of content for {url}")
 
     # Client-rendered pages (e.g. AoPS, Obsidian Publish) serve a shell:
     # take metadata from the rendered DOM when the raw HTML carries no

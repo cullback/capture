@@ -466,6 +466,15 @@ def test_arxiv_published_from_abs_page():
     assert arxiv_published(html) == "2026-03-27"
 
 
+def test_challenge_page_detection():
+    from capture.extract import challenge_page
+
+    # steamdb.info serves its bot check with HTTP 200
+    assert challenge_page("<title>Checking your browser</title><p>steamdb</p>")
+    assert challenge_page("<title>Just a moment...</title>")
+    assert not challenge_page("<title>A post about Cloudflare</title><p>body</p>")
+
+
 def test_paywalled_detects_substack_marker():
     from capture.extract import paywalled
 
