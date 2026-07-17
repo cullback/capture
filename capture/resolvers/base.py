@@ -27,9 +27,23 @@ def fetch_html(url: str) -> str:
     # curl rather than urllib: WAFs (e.g. AoPS) block urllib's client
     # fingerprint no matter what headers it sends.
     result = subprocess.run(
-        ["curl", "-sL", "--max-time", "120", "-A", "capture/0.1", url],
+        [
+            "curl",
+            "-sL",
+            "--max-time",
+            "120",
+            "-A",
+            "capture/0.1",
+            url,
+            "-w",
+            "\n%{http_code}",
+        ],
         check=True,
         capture_output=True,
         text=True,
     )
-    return result.stdout
+    body, _, status = result.stdout.rpartition("\n")
+    if status.startswith(("4", "5")):
+        # Error pages (404s, block pages) must not be archived as content.
+        raise RuntimeError(f"HTTP {status} for {url}")
+    return body

@@ -1,6 +1,7 @@
 """CLI entry point: capture a web page into data/."""
 
 import argparse
+import sys
 
 from capture.pipeline import capture, existing_capture
 
@@ -22,8 +23,11 @@ def main() -> None:
         print(f"already captured: {duplicate.name}")
         print("pass -f / --force to re-capture")
         return
-    if folder := capture(args.url):
-        print(folder)
+    try:
+        if folder := capture(args.url):
+            print(folder)
+    except RuntimeError as error:
+        sys.exit(f"capture failed: {error}")
 
 
 if __name__ == "__main__":
