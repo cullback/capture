@@ -215,10 +215,14 @@ def slug_affinity(text: str, segment: str) -> bool:
 
 def strip_site_name(title: str, site_name: str) -> str:
     """Drop a leading "Site Name - " or trailing "- Site Name" segment
-    exactly matching a known site name (masthead or og:site_name)."""
+    exactly matching a known site name (masthead or og:site_name).
+
+    The comma separator (nightingaledvs.com titles pages
+    "Post, Nightingale") is safe only here, where the tail must equal a
+    declared site name exactly."""
     if not site_name:
         return title
-    for separator in [" - ", " | ", " – ", " — ", " · ", ": "]:
+    for separator in [" - ", " | ", " – ", " — ", " · ", ": ", ", "]:
         head, found, tail = title.partition(separator)
         if found and tail and compact(head) == compact(site_name):
             return tail.strip()

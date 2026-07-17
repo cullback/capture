@@ -170,6 +170,19 @@ def test_title_strips_og_site_name_suffix():
     assert page_title(html, "dervis.de") == "The Case for Physical Media Ownership"
 
 
+def test_title_strips_comma_separated_site_name():
+    # nightingaledvs.com: og:title "Post, Nightingale" with the site
+    # name declared in og:site_name
+    html = (
+        '<meta property="og:title" content="I Stopped Using Box Plots:'
+        ' The Aftermath, Nightingale">'
+        '<meta property="og:site_name" content="Nightingale">'
+    )
+    assert page_title(html, "nightingaledvs.com") == (
+        "I Stopped Using Box Plots: The Aftermath"
+    )
+
+
 def test_title_url_slug_disambiguates_wrapped_h1():
     # gameprogrammingpatterns.com: <title> is "H1 · Section · Site" and
     # the section is longer than the true title; the URL slug decides
