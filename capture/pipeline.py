@@ -143,13 +143,13 @@ def frontmatter(resolution: Resolution, title: str, publish: str | None) -> str:
     domain = urlparse(resolution.source).netloc.removeprefix("www.")
     lines = [
         "---",
-        f"title: {json.dumps(title or 'Untitled')}",
+        f"title: {json.dumps(title or 'Untitled', ensure_ascii=False)}",
         f"domain: {domain}",
         f"url: {resolution.source}",
     ]
     for key, value in resolution.extra.items():
         if value:
-            lines.append(f"{key}: {json.dumps(value)}")
+            lines.append(f"{key}: {json.dumps(value, ensure_ascii=False)}")
     if resolution.archive:
         lines.append(f"archive: {resolution.archive}")
     if hn := hackernews_url(resolution.source):
