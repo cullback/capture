@@ -161,6 +161,16 @@ flake as they protect any future wheel). PDF titles prefer the
 converted document's first heading: pdfinfo Title is often the LaTeX
 source filename.
 
+A blind side-by-side review (LaTeXML/pandoc vs datalab, two papers)
+found datalab decisively cleaner AND more complete: LaTeXML dropped
+the Attention paper's two main results tables and one paper's central
+equation block as [TABLE], letter-split identifiers with \hspace{0pt},
+and renumbered bibliographies. Datalab's known failure mode is OCR
+corruption of proper nouns (FRACSTRAN for FRACTRAN, misspelled author
+emails) and occasional invention (speculative mermaid diagrams for
+figures, added diacritics). Equations sampled clean in both. The PDF
+in each capture is ground truth for anything load-bearing.
+
 ## Current fetcher matrix
 
 | Fetcher                  | Runs JS | Fingerprint                    | Role                                  |
