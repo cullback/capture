@@ -14,6 +14,29 @@ function Span(el)
   end
 end
 
+-- A table with exactly one cell is a layout wrapper (1990s centering
+-- tables, e.g. xkcd.com/solution.html): unwrap it, since the gfm
+-- writer would collapse block content in tables to "[TABLE]".
+function Table(el)
+  local cells = {}
+  local function collect(rows)
+    for _, row in ipairs(rows) do
+      for _, cell in ipairs(row.cells) do
+        table.insert(cells, cell)
+      end
+    end
+  end
+  collect(el.head.rows)
+  for _, body in ipairs(el.bodies) do
+    collect(body.head)
+    collect(body.body)
+  end
+  collect(el.foot.rows)
+  if #cells == 1 then
+    return cells[1].contents
+  end
+end
+
 -- Pandoc writes code blocks as indented markdown unless they carry a
 -- language, and syntax highlighters leave junk classes ("highlight")
 -- that gfm drops: normalize so every block comes out fenced.

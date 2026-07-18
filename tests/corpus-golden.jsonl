@@ -200,6 +200,7 @@
 {"folder": "matklad.github.io - 2025-03-31 - random-numbers-included", "title": "Random Numbers Included", "publish": "2025-03-31"}
 {"folder": "matklad.github.io - 2025-08-09 - zigs-lovely-syntax", "title": "Zig’s Lovely Syntax", "publish": "2025-08-09"}
 {"folder": "matklad.github.io - 2025-12-28 - parsing-advances", "title": "Parsing Advances", "publish": "2025-12-28"}
+{"folder": "mattmahoney.net - 2009-07-23 - rationale-for-a-large-text-compression-benchmark", "title": "Rationale for a Large Text Compression Benchmark", "publish": "2009-07-23"}
 {"folder": "mazzo.li - 2022-06-01 - how-fast-are-linux-pipes-anyway", "title": "How fast are Linux pipes anyway?", "publish": "2022-06-01"}
 {"folder": "mcyoung.xyz - 2025-03-11 - the-art-of-formatting-code", "title": "The Art of Formatting Code", "publish": "2025-03-11"}
 {"folder": "mcyoung.xyz - 2025-10-21 - why-ssa", "title": "Why SSA?", "publish": "2025-10-21"}
@@ -242,10 +243,13 @@
 {"folder": "mechanicalmarkets.wordpress.com - 2023-06-07 - balloons-retail-order-auctions-citadel-and-antitrust-iex-and-ftx", "title": "Balloons, Retail Order Auctions, Citadel and Antitrust, IEX and FTX", "publish": "2023-06-07"}
 {"folder": "medium.com - digital-gamma-blog - 2018-06-08 - everything-you-thought-you-knew-about-spoofing-is-wrong", "title": "Everything You Thought You Knew About Spoofing is Wrong!", "publish": "2018-06-08"}
 {"folder": "medium.com - prooftrading - 2023-01-06 - the-sec-isnt-mad-at-pfof-theyre-just-disappointed", "title": "The SEC Isn’t Mad at PFOF. They’re Just Disappointed.", "publish": "2023-01-06"}
+{"folder": "michaelfogleman.com - 2026-07-18 - rush", "title": "", "publish": null}
 {"folder": "nicholas.carlini.com - 2021-12-30 - a-simple-cpu-on-the-game-of-life-part-4", "title": "A Simple CPU on the Game of Life - Part 4", "publish": "2021-12-30"}
 {"folder": "nicholas.carlini.com - 2025-01-05 - regex-chess-a-2-ply-minimax-chess-engine-in-84-688-regular-expressions", "title": "Regex Chess: A 2-ply minimax chess engine in 84,688 regular expressions", "publish": "2025-01-05"}
 {"folder": "nightingaledvs.com - 2021-11-04 - ive-stopped-using-box-plots-should-you", "title": "I’ve Stopped Using Box Plots. Should You?", "publish": "2021-11-04"}
 {"folder": "nightingaledvs.com - 2025-01-28 - i-stopped-using-box-plots-the-aftermath", "title": "I Stopped Using Box Plots: The Aftermath", "publish": "2025-01-28"}
+{"folder": "noahpinion.blog - 2022-09-16 - no-the-u-s-didnt-outsource-our-carbon-emissions-to-china", "title": "No, the U.S. didn't outsource our carbon emissions to China", "publish": "2022-09-16"}
+{"folder": "npopov.com - 2023-10-03 - llvm-scalar-evolution", "title": "LLVM: Scalar evolution", "publish": "2023-10-03"}
 {"folder": "nunosempere.com - 2024-02-25 - a-bayesian-nerd-snipe", "title": "A Bayesian Nerd-Snipe", "publish": "2024-02-25"}
 {"folder": "nunosempere.com - 2024-06-02 - simple-electoral-college-simulation", "title": "Simple electoral college simulation", "publish": "2024-06-02"}
 {"folder": "nunosempere.com - 2024-09-10 - whats-the-chance-your-startup-will-succeed", "title": "What's the chance your startup will succeed?", "publish": "2024-09-10"}
@@ -282,6 +286,7 @@
 {"folder": "scottcondie.github.io - 2017-07-11 - orderbooks-and-asset-pricing", "title": "Orderbooks and Asset Pricing¶", "publish": "2017-07-11"}
 {"folder": "scottcondie.github.io - 2026-07-17 - the-lucas-tree-model-of-asset-pricing", "title": "The Lucas Tree Model of Asset Pricing¶", "publish": null}
 {"folder": "signalsmith-audio.co.uk - 2022-02-10 - constant-time-peak-hold", "title": "Constant-time peak-hold", "publish": "2022-02-10"}
+{"folder": "sigwinch.xyz - 2026-07-18 - paragraph-flowing-as-a-fold", "title": "Paragraph flowing as a fold", "publish": null}
 {"folder": "simone.org - 2025-04-02 - what-if-we-made-advertising-illegal", "title": "What If We Made Advertising Illegal?", "publish": "2025-04-02"}
 {"folder": "simonwillison.net - 2025-01-02 - i-still-dont-think-companies-serve-you-ads-based-on-spying-through-your-microphone", "title": "I still don’t think companies serve you ads based on spying through your microphone", "publish": "2025-01-02"}
 {"folder": "sive.rs - 2026-07-17 - tech-independence", "title": "Tech Independence", "publish": null}
@@ -308,3 +313,6 @@
 {"folder": "wassimulator.com - 2026-07-17 - programming-vehicles-in-games", "title": "Programming Vehicles in Games", "publish": "2021-05-15"}
 {"folder": "wiki.alopex.li - 2026-07-17 - riscin2022", "title": "RiscIn2022", "publish": null}
 {"folder": "wiki.alopex.li - 2026-07-17 - riscvnotes", "title": "RiscVNotes", "publish": null}
+{"folder": "xkcd.com - 2026-07-18 - blue-eyes-the-hardest-logic-puzzle-in-the-world-solution", "title": "Blue Eyes - The Hardest Logic Puzzle in the World - Solution", "publish": null}
+{"folder": "xnacly.me - 2025-07-14 - strategies-for-very-fast-lexers", "title": "Strategies for very fast Lexers", "publish": "2025-07-14"}
+{"folder": "yangdanny97.github.io - 2023-12-28 - the-right-way-to-pipe", "title": "The Right Way To Pipe", "publish": "2023-12-28"}
