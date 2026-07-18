@@ -9,6 +9,7 @@ Each capture lands in its own folder:
         media/             downloaded images, referenced relatively
 """
 
+import hashlib
 import json
 import re
 import shutil
@@ -142,7 +143,7 @@ def write_capture(
 
     markdown = folder / f"{name}.md"
     if resolution.markdown is not None:
-        markdown.write_text(resolution.markdown)
+        markdown.write_text(localize_images(resolution.markdown, folder))
     elif (
         not resolution.use_browser
         or not pandoc(resolution.content, markdown.name, folder)
@@ -252,6 +253,50 @@ def pandoc(source: str, output: str, cwd: Path) -> bool:
         cwd=cwd,
     )
     return result.returncode == 0
+
+
+def localize_images(text: str, folder: Path) -> str:
+    """Download remote images referenced by ready-made markdown into
+    media/ and rewrite the links, mirroring pandoc's --extract-media
+    for the conversion path. Failures keep the remote URL."""
+
+    def fetch(url: str) -> str:
+        suffix = Path(urlparse(url).path).suffix
+        if not (0 < len(suffix) <= 5 and suffix[1:].isalnum()):
+            suffix = ""
+        name = hashlib.sha1(url.encode()).hexdigest()[:16] + suffix
+        target = folder / "media" / name
+        if not target.exists():
+            (folder / "media").mkdir(exist_ok=True)
+            result = subprocess.run(
+                [
+                    "curl",
+                    "-sL",
+                    "--max-time",
+                    "120",
+                    "-A",
+                    "capture/0.1",
+                    "-o",
+                    str(target),
+                    url,
+                ],
+                capture_output=True,
+            )
+            if result.returncode != 0 or not target.stat().st_size:
+                target.unlink(missing_ok=True)
+                return url
+        return f"media/{name}"
+
+    text = re.sub(
+        r"(!\[[^\]]*\]\()(https?://[^)\s]+)",
+        lambda m: m.group(1) + fetch(m.group(2)),
+        text,
+    )
+    return re.sub(
+        r'(<img[^>]*\bsrc=")(https?://[^"]+)(")',
+        lambda m: m.group(1) + fetch(m.group(2)) + m.group(3),
+        text,
+    )
 
 
 def thin(markdown: Path) -> bool:

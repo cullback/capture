@@ -242,6 +242,31 @@ def test_existing_capture_resolves_youtube_forms(tmp_path, monkeypatch):
     assert module.existing_capture("https://youtu.be/AAAAAAAAAAA") is None
 
 
+def test_localize_images(tmp_path, monkeypatch):
+    from pathlib import Path
+
+    import capture.pipeline as pipeline
+
+    def fake_curl(cmd, capture_output=True, **kwargs):
+        class Result:
+            returncode = 0
+
+        output = Path(cmd[cmd.index("-o") + 1])
+        output.write_bytes(b"png bytes" if "good" in cmd[-1] else b"")
+        return Result()
+
+    monkeypatch.setattr(pipeline.subprocess, "run", fake_curl)
+    text = (
+        "![figure](https://example.com/good.png)\n"
+        '<img width="400" src="https://example.com/good.png">\n'
+        "![broken](https://example.com/bad.png)\n"
+    )
+    out = pipeline.localize_images(text, tmp_path)
+    assert out.count("media/") == 2  # markdown and img forms localized
+    assert "https://example.com/bad.png" in out  # failure keeps remote
+    assert len(list((tmp_path / "media").iterdir())) == 1  # deduped
+
+
 def test_github_repo_url_forms():
     from capture.resolvers.github import github_repo
 
