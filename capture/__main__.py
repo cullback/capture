@@ -11,20 +11,24 @@ def main() -> None:
         prog="capture",
         description="Save a page as a faithful HTML archive plus clean markdown.",
     )
-    parser.add_argument("url", help="page to capture")
+    parser.add_argument("url", help="page URL, or a local PDF path to ingest")
     parser.add_argument(
         "-f",
         "--force",
         action="store_true",
         help="re-capture even when the URL already exists in data/",
     )
+    parser.add_argument(
+        "--origin",
+        help="original URL for provenance and dedup when ingesting a local file",
+    )
     args = parser.parse_args()
-    if not args.force and (duplicate := existing_capture(args.url)):
+    if not args.force and (duplicate := existing_capture(args.origin or args.url)):
         print(f"already captured: {duplicate.name}")
         print("pass -f / --force to re-capture")
         return
     try:
-        if folder := capture(args.url):
+        if folder := capture(args.url, args.origin):
             print(folder)
     except RuntimeError as error:
         sys.exit(f"capture failed: {error}")

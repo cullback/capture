@@ -22,6 +22,34 @@ def resolve_pdf(url: str) -> Resolution | None:
     return pdf_resolution(url)
 
 
+def resolve_local_pdf(path: Path, origin: str | None = None) -> Resolution:
+    """Ingest a PDF the user downloaded themselves (hostile publisher
+    pages aren't worth automating). origin, when given, supplies
+    provenance: frontmatter url, domain, dedup, HN lookup."""
+    holder = tempfile.mkdtemp()
+    pdf = Path(holder) / "capture.pdf"
+    shutil.copyfile(path, pdf)  # never consume the user's file
+    if pdf.read_bytes()[:5] != b"%PDF-":
+        raise RuntimeError(f"{path} is not a PDF")
+    info = pdf_info(pdf)
+    text, images = pdf_markdown(pdf)
+    text = re.sub(r"(!\[[^\]]*\]\()(?!https?://|media/)([^)\s]+)", r"\1media/\2", text)
+    domain = urlparse(origin).netloc.removeprefix("www.") if origin else "pdf"
+    return Resolution(
+        source=origin or "",
+        content=origin or "",
+        domain=domain,
+        use_browser=False,
+        publish=info.get("date"),
+        markdown=text,
+        title=markdown_heading(text)
+        or info.get("title")
+        or path.stem.replace("_", " ").replace("-", " "),
+        extra={"author": info.get("author", "")},
+        download_media=lambda folder, name: move_artifacts(pdf, images, folder, name),
+    )
+
+
 def pdf_resolution(url: str) -> Resolution | None:
     """Download and resolve a URL that serves a PDF, however it's
     spelled: called by extension match or by content sniffing."""

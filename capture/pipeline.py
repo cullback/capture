@@ -46,8 +46,14 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 PANDOC_FORMAT = "html+tex_math_dollars+tex_math_single_backslash"
 
 
-def capture(url: str) -> Path | None:
-    resolution = resolve(url)
+def capture(url: str, origin: str | None = None) -> Path | None:
+    target = Path(url)
+    if target.is_file():
+        from capture.resolvers.pdf import resolve_local_pdf
+
+        resolution = resolve_local_pdf(target, origin)
+    else:
+        resolution = resolve(url)
     if paywalled(resolution.html):
         print(f"skipped: paywalled, only a preview is public — {url}")
         return None
@@ -170,15 +176,18 @@ def frontmatter(resolution: Resolution, title: str, publish: str | None) -> str:
     lines = [
         "---",
         f"title: {json.dumps(title or 'Untitled', ensure_ascii=False)}",
-        f"domain: {domain}",
-        f"url: {resolution.source}",
     ]
+    if domain:
+        lines.append(f"domain: {domain}")
+    if resolution.source:
+        # Omitted for local ingests without an --origin: no known URL.
+        lines.append(f"url: {resolution.source}")
     for key, value in resolution.extra.items():
         if value:
             lines.append(f"{key}: {json.dumps(value, ensure_ascii=False)}")
     if resolution.archive:
         lines.append(f"archive: {resolution.archive}")
-    if hn := hackernews_url(resolution.source):
+    if resolution.source and (hn := hackernews_url(resolution.source)):
         lines.append(f"hackernews: {hn}")
     lines.append(f"capture_date: {date.today().isoformat()}")
     if publish:
