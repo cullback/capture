@@ -219,33 +219,11 @@ def best_submission(matches: list[dict]) -> dict:
 
 def single_file(url: str, output: Path) -> bool:
     # The dotfiles single-file-archive script is the canonical home of
-    # the hardened flags; the embedded invocation is the fallback for
-    # machines without it.
-    if tool := find_tool("single-file-archive"):
-        result = subprocess.run([tool, url, str(output)])
-        return result.returncode == 0
-    result = subprocess.run(
-        [
-            "single-file",
-            "--browser-executable-path",
-            shutil.which("chromium") or "chromium",
-            # Look like a human browser: Cloudflare blocks headless
-            # chromium's default fingerprint (e.g. on AoPS).
-            "--browser-args",
-            json.dumps(
-                [
-                    "--disable-blink-features=AutomationControlled",
-                    "--user-agent=Mozilla/5.0 (X11; Linux x86_64)"
-                    " AppleWebKit/537.36 (KHTML, like Gecko)"
-                    " Chrome/145.0.0.0 Safari/537.36",
-                ]
-            ),
-            "--filename-conflict-action",
-            "overwrite",
-            url,
-            str(output),
-        ],
-    )
+    # the hardened browser flags, and a hard dependency.
+    tool = find_tool("single-file-archive")
+    if not tool:
+        raise RuntimeError("single-file-archive not found (dotfiles ~/.local/bin)")
+    result = subprocess.run([tool, url, str(output)])
     return result.returncode == 0
 
 

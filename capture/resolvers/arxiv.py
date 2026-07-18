@@ -12,10 +12,9 @@ from capture.resolvers.pdf import move_artifacts, pdf_markdown
 
 
 def resolve_arxiv(url: str) -> Resolution | None:
-    """Identity from the abs page. Markdown from datalab conversion of
+    """Identity from the abs page; markdown from datalab conversion of
     the typeset PDF (cleaner than the LaTeXML HTML, which carries page
-    chrome and equation-table artifacts), with the HTML rendering as
-    the fallback conversion source."""
+    chrome and equation-table artifacts)."""
     aid = arxiv_id(url)
     if not aid:
         return None
@@ -36,16 +35,13 @@ def resolve_arxiv(url: str) -> Resolution | None:
         ],
         capture_output=True,
     )
-    text = images = None
-    if pdf.exists() and pdf.read_bytes()[:5] == b"%PDF-":
-        text, images = pdf_markdown(pdf)
-        if text:
-            text = re.sub(
-                r"(!\[[^\]]*\]\()(?!https?://|media/)([^)\s]+)", r"\1media/\2", text
-            )
+    if not pdf.exists() or pdf.read_bytes()[:5] != b"%PDF-":
+        raise RuntimeError(f"could not download the PDF for {source}")
+    text, images = pdf_markdown(pdf)
+    text = re.sub(r"(!\[[^\]]*\]\()(?!https?://|media/)([^)\s]+)", r"\1media/\2", text)
     return Resolution(
         source=source,
-        content=arxiv_content_url(aid),
+        content=source,
         html=html,
         # The typeset PDF is the canonical artifact; conversions only
         # feed the markdown.
@@ -62,17 +58,6 @@ def arxiv_id(url: str) -> str | None:
         url,
     )
     return match.group(1) if match else None
-
-
-def arxiv_content_url(aid: str) -> str:
-    """The paper's HTML rendering: official when it exists, else ar5iv."""
-    official = f"https://arxiv.org/html/{aid}"
-    status = subprocess.run(
-        ["curl", "-sL", "-o", "/dev/null", "-w", "%{http_code}", official],
-        capture_output=True,
-        text=True,
-    ).stdout
-    return official if status == "200" else f"https://ar5iv.labs.arxiv.org/html/{aid}"
 
 
 def arxiv_published(html: str) -> str | None:

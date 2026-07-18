@@ -7,12 +7,7 @@ a module here and registering it in RESOLVERS — not a branch in the
 pipeline.
 """
 
-from capture.resolvers.arxiv import (
-    arxiv_content_url,
-    arxiv_id,
-    arxiv_published,
-    resolve_arxiv,
-)
+from capture.resolvers.arxiv import arxiv_id, arxiv_published, resolve_arxiv
 from capture.resolvers.base import Resolution, fetch_html
 from capture.resolvers.default import (
     original_url,
@@ -54,7 +49,6 @@ def resolve(url: str) -> Resolution:
 __all__ = [
     "RESOLVERS",
     "Resolution",
-    "arxiv_content_url",
     "arxiv_id",
     "arxiv_published",
     "fetch_html",
