@@ -1,30 +1,58 @@
-"""arxiv papers: HTML rendering for content, abs page for identity."""
+"""arxiv papers: PDF for content and artifact, abs page for identity."""
 
 import re
 import subprocess
+import tempfile
+from pathlib import Path
 
 from capture.extract import body_date
 from capture.resolvers import base
 from capture.resolvers.base import Resolution
+from capture.resolvers.pdf import move_artifacts, pdf_markdown
 
 
 def resolve_arxiv(url: str) -> Resolution | None:
-    """Identity from the abs page; content from the HTML rendering,
-    which is generated from the LaTeX source so math survives."""
+    """Identity from the abs page. Markdown from datalab conversion of
+    the typeset PDF (cleaner than the LaTeXML HTML, which carries page
+    chrome and equation-table artifacts), with the HTML rendering as
+    the fallback conversion source."""
     aid = arxiv_id(url)
     if not aid:
         return None
     source = f"https://arxiv.org/abs/{aid}"
     html = base.fetch_html(source)
+    pdf = Path(tempfile.mkdtemp()) / "capture.pdf"
+    subprocess.run(
+        [
+            "curl",
+            "-sL",
+            "--max-time",
+            "300",
+            "-A",
+            "capture/0.1",
+            "-o",
+            str(pdf),
+            f"https://arxiv.org/pdf/{aid}",
+        ],
+        capture_output=True,
+    )
+    text = images = None
+    if pdf.exists() and pdf.read_bytes()[:5] == b"%PDF-":
+        text, images = pdf_markdown(pdf)
+        if text:
+            text = re.sub(
+                r"(!\[[^\]]*\]\()(?!https?://|media/)([^)\s]+)", r"\1media/\2", text
+            )
     return Resolution(
         source=source,
         content=arxiv_content_url(aid),
         html=html,
-        # The typeset PDF is the canonical artifact; the HTML rendering
-        # only feeds the markdown conversion.
+        # The typeset PDF is the canonical artifact; conversions only
+        # feed the markdown.
         save_html=False,
         publish=arxiv_published(html),
-        pdf_url=f"https://arxiv.org/pdf/{aid}",
+        markdown=text,
+        download_media=lambda folder, name: move_artifacts(pdf, images, folder, name),
     )
 
 
