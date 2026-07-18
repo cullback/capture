@@ -19,6 +19,18 @@
       in
       {
         devShells.default = pkgs.mkShell {
+          # PyPI wheels (torch, numpy for marker-pdf) link against
+          # libstdc++ and zlib, which NixOS doesn't expose by default.
+          LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath [
+            pkgs.stdenv.cc.cc.lib
+            pkgs.zlib
+          ];
+          # yt-dlp (a python3.13 app) leaks its dependency closure into
+          # PYTHONPATH, which poisons the project's python3.12 venv;
+          # its own wrapper re-adds what it needs.
+          shellHook = ''
+            unset PYTHONPATH
+          '';
           packages = with pkgs; [
             python312
             uv
@@ -34,6 +46,7 @@
             yt-dlp
             ffmpeg
             git
+            poppler-utils
           ];
         };
       }

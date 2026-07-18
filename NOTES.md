@@ -146,6 +146,18 @@ different page" mechanically crosses into guesswork, so the capture
 keeps the fallback capture-date. This is the designated trigger case
 for the LLM date fallback.
 
+## Direct PDFs: marker on CPU
+
+PDF URLs resolve to the PDF as the canonical artifact (pdfinfo
+metadata for date/author) plus marker-converted markdown with real TeX
+and extracted figures. Marker costs ~50s/page on the 16-core CPU
+(20-50x slower than GPU) and a one-time 3.3GB model download to
+~/.cache/datalab. Two NixOS shims were needed for the PyPI torch
+stack: LD_LIBRARY_PATH for libstdc++/zlib, and unset PYTHONPATH in the
+devshell (nixpkgs yt-dlp leaks its python3.13 closure, poisoning the
+3.12 venv). PDF titles prefer the converted document's first heading:
+pdfinfo Title is often the LaTeX source filename.
+
 ## Current fetcher matrix
 
 | Fetcher                  | Runs JS | Fingerprint                    | Role                                  |
