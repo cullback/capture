@@ -62,7 +62,9 @@ def first_commit_date(owner: str, repo: str, path: str) -> str | None:
 def github_repo(url: str) -> tuple[str, str] | None:
     """Owner and name for a repository ROOT url; deeper paths (blobs,
     issues, pulls) are not repo captures."""
-    match = re.search(r"github\.com/([^/?#]+)/([^/?#]+?)(?:\.git)?/?(?:[?#].*)?$", url)
+    match = re.search(
+        r"(?<!gist\.)github\.com/([^/?#]+)/([^/?#]+?)(?:\.git)?/?(?:[?#].*)?$", url
+    )
     if not match or match.group(1) in ("orgs", "topics", "search", "sponsors"):
         return None
     return match.group(1), match.group(2)

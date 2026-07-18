@@ -291,6 +291,8 @@ def test_github_repo_url_forms():
     assert github_repo("https://github.com/o/r/blob/main/x.md") is None
     assert github_repo("https://github.com/o/r/issues/5") is None
     assert github_repo("https://github.com/topics/compression") is None
+    # Gists are not repos (their user/id shape looks like owner/repo)
+    assert github_repo("https://gist.github.com/erincandescent/8a10eee") is None
 
 
 def test_github_blob_markdown(monkeypatch):
