@@ -19,7 +19,6 @@ def resolve_github(url: str) -> Resolution | None:
     gh = github_markdown(url)
     if not gh:
         return None
-    heading = re.search(r"^#\s+(.+)$", gh["markdown"], re.M)
     return Resolution(
         source=url,
         content=url,
@@ -27,8 +26,37 @@ def resolve_github(url: str) -> Resolution | None:
         html=base.fetch_html(url),
         publish=gh["publish"],
         markdown=gh["markdown"],
-        title=heading.group(1).strip() if heading else gh["name"],
+        title=markdown_heading(gh["markdown"]) or gh["name"],
     )
+
+
+def markdown_heading(markdown: str) -> str | None:
+    """The document's first heading: atx (# Title) or setext (Title
+    over === underline, as quchen/articles uses)."""
+    if match := re.search(r"^#\s+(.+)$", markdown, re.M):
+        return match.group(1).strip()
+    if match := re.search(r"^([^\s#>-][^\n]*)\n=+\s*$", markdown, re.M):
+        return match.group(1).strip()
+    return None
+
+
+def first_commit_date(owner: str, repo: str, path: str) -> str | None:
+    """When the file first appeared: the oldest commit touching it. The
+    page's visible date is the LAST commit, a modified date."""
+    try:
+        commits = json.loads(
+            base.fetch_html(
+                f"https://api.github.com/repos/{owner}/{repo}/commits"
+                f"?path={path}&per_page=100"
+            )
+        )
+    except base.FetchError:
+        return None
+    if not isinstance(commits, list) or not commits:
+        return None
+    # With >100 commits this is approximate; article files rarely are.
+    oldest = commits[-1]
+    return (oldest.get("commit", {}).get("author", {}).get("date") or "")[:10] or None
 
 
 def github_repo(url: str) -> tuple[str, str] | None:
@@ -123,6 +151,8 @@ def github_markdown(url: str) -> dict | None:
             year, month, day = (int(g) for g in match.groups())
             if 1 <= month <= 12 and 1 <= day <= 31:
                 publish = f"{year}-{month:02d}-{day:02d}"
+        if not publish:
+            publish = first_commit_date(owner, repo, path)
         return {
             "markdown": text,
             "publish": publish,

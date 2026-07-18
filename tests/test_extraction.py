@@ -267,6 +267,17 @@ def test_localize_images(tmp_path, monkeypatch):
     assert len(list((tmp_path / "media").iterdir())) == 1  # deduped
 
 
+def test_markdown_heading_atx_and_setext():
+    from capture.resolvers.github import markdown_heading
+
+    assert markdown_heading("# Why CORDIC\n\nbody") == "Why CORDIC"
+    # quchen/articles: setext underline headings
+    assert markdown_heading("Algebraic blindness\n===================\n\nbody") == (
+        "Algebraic blindness"
+    )
+    assert markdown_heading("no heading here\n") is None
+
+
 def test_github_repo_url_forms():
     from capture.resolvers.github import github_repo
 
