@@ -312,6 +312,38 @@ def test_refused_fetch_falls_back_to_browser_but_missing_stays_fatal(monkeypatch
         resolve_default("https://predictionmarkets.miraheze.org/wiki/Gone")
 
 
+def test_lesswrong_post_url_forms():
+    from capture.resolvers import lesswrong_post
+
+    for url in [
+        "https://www.lesswrong.com/posts/7X2j8HAkWdmMoS8PE/disputing-definitions",
+        "https://www.greaterwrong.com/posts/7X2j8HAkWdmMoS8PE/disputing-definitions",
+        "https://www.alignmentforum.org/posts/7X2j8HAkWdmMoS8PE/disputing-definitions",
+    ]:
+        assert lesswrong_post(url) == ("7X2j8HAkWdmMoS8PE", "disputing-definitions")
+    assert lesswrong_post("https://www.lesswrong.com/tag/rationality") is None
+
+
+def test_lesswrong_metadata_from_greaterwrong(monkeypatch):
+    import capture.resolvers.base as base
+    from capture.resolvers.lesswrong import resolve_lesswrong
+
+    page = (
+        '<a class="author" href="/users/eliezer_yudkowsky" data-userid="x">'
+        "Eliezer Yudkowsky</a>"
+        '<span class="date hide-until-init" data-js-date=1202775311000>'
+        "12 Feb 2008 0:15 UTC</span>"
+    )
+    monkeypatch.setattr(base, "fetch_html", lambda u: page)
+    resolution = resolve_lesswrong(
+        "https://www.lesswrong.com/posts/7X2j8HAkWdmMoS8PE/disputing-definitions"
+    )
+    assert resolution is not None
+    assert resolution.publish == "2008-02-12"
+    assert resolution.domain == "lesswrong.com - eliezer-yudkowsky"
+    assert resolution.extra["author"] == "Eliezer Yudkowsky"
+
+
 def test_wayback_snapshot_url_forms():
     from capture.resolvers import wayback_snapshot
 

@@ -26,6 +26,7 @@ from capture.resolvers.reddit import (
     reddit_thread,
     resolve_reddit,
 )
+from capture.resolvers.lesswrong import lesswrong_post, resolve_lesswrong
 from capture.resolvers.wayback import resolve_wayback, wayback_snapshot
 from capture.resolvers.youtube import resolve_youtube, youtube_id
 
@@ -35,6 +36,7 @@ RESOLVERS = [
     resolve_youtube,
     resolve_reddit,
     resolve_wayback,
+    resolve_lesswrong,
 ]
 
 
@@ -61,7 +63,9 @@ __all__ = [
     "resolve",
     "resolve_arxiv",
     "resolve_default",
+    "lesswrong_post",
     "resolve_github",
+    "resolve_lesswrong",
     "resolve_reddit",
     "resolve_wayback",
     "resolve_youtube",

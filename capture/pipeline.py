@@ -32,6 +32,7 @@ from capture.extract import (
 from capture.resolvers import (
     Resolution,
     arxiv_id,
+    lesswrong_post,
     reddit_thread,
     resolve,
     wayback_snapshot,
@@ -294,6 +295,8 @@ def existing_capture(url: str) -> Path | None:
         )
     elif snapshot := wayback_snapshot(url):
         target = normalize(snapshot[1])
+    elif post := lesswrong_post(url):
+        target = normalize(f"https://www.lesswrong.com/posts/{post[0]}/{post[1]}")
     for markdown in sorted((REPO_ROOT / "data").glob("*/*.md")):
         header = markdown.read_text(errors="replace")[:600]
         for line in header.splitlines():
