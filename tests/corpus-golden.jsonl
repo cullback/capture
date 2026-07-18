@@ -6,8 +6,6 @@
 {"folder": "anuncommonlab.com - 2014-07-12 - how-simulations-work", "title": "How Simulations Work", "publish": "2014-07-12"}
 {"folder": "arch.dog - 2025-03-30 - ran-out-of-infrastructure-titles", "title": "Ran out of infrastructure titles", "publish": "2025-03-30"}
 {"folder": "artofproblemsolving.com - 2022-01-18 - the-emoji-problem-part-i", "title": "The Emoji Problem: Part I", "publish": "2022-01-18"}
-{"folder": "arxiv.org - 2017-06-12 - attention-is-all-you-need", "title": "Attention Is All You Need", "publish": "2023-08-02"}
-{"folder": "arxiv.org - 2026-03-23 - all-elementary-functions-from-a-single-binary-operator", "title": "All elementary functions from a single operator", "publish": "2025-11-18"}
 {"folder": "austinhenley.com - 2016-11-11 - my-favorite-wikipedia-articles-about-science", "title": "My favorite Wikipedia articles about science", "publish": "2016-11-11"}
 {"folder": "austinhenley.com - 2019-06-27 - type-inference-has-usability-problems", "title": "Type inference has usability problems", "publish": "2019-06-27"}
 {"folder": "austinhenley.com - 2023-09-30 - a-raycasting-engine-in-7-easy-steps", "title": "A raycasting engine in 7 easy steps", "publish": "2023-09-30"}
@@ -55,6 +53,7 @@
 {"folder": "chadnauseam.com - 2026-07-13 - my-new-rust-binary-search", "title": "My new Rust binary search", "publish": null}
 {"folder": "chessprogramming.org - 1994-10-20 - traversing-subsets-of-a-set", "title": "Traversing Subsets of a Set", "publish": "1994-10-20"}
 {"folder": "chiark.greenend.org.uk - 2025-02-14 - xor", "title": "XOR", "publish": "2025-02-14"}
+{"folder": "chipsandcheese.com - 2022-11-05 - amds-zen-4-part-1-frontend-and-execution-engine", "title": "AMD’s Zen 4 Part 1: Frontend and Execution Engine", "publish": "2022-11-04"}
 {"folder": "chrisstucchio.com - 2012-04-16 - a-high-frequency-traders-apology-pt-1", "title": "A High Frequency Trader's Apology, Pt 1", "publish": "2012-04-16"}
 {"folder": "chrisstucchio.com - 2012-05-22 - high-frequency-trading-whats-broken-and-how-to-fix-it", "title": "High Frequency Trading - What's broken and how to fix it", "publish": "2012-05-22"}
 {"folder": "chrisstucchio.com - 2014-04-03 - how-to-not-get-ripped-off-by-high-frequency-traders", "title": "How to not get ripped off by High Frequency Traders", "publish": "2014-04-03"}
@@ -71,6 +70,7 @@
 {"folder": "ddmckinnon.com - 2024-01-25 - on-climbing-the-stat-arb-cex-dex-leaderboard-comparative-advantage-and-careers-and-my-future-in-crypto", "title": "On Climbing the Stat Arb (CEX/DEX) Leaderboard, Comparative Advantage and Careers, and My Future in Crypto", "publish": "2024-01-25"}
 {"folder": "dervis.de - 2026-07-02 - the-case-for-physical-media-ownership", "title": "The Case for Physical Media Ownership", "publish": "2026-07-02"}
 {"folder": "dikshaupadhyay.com - 2025-03-20 - matched-and-deleted-but-remembered", "title": "Matched and Deleted, But Remembered", "publish": "2025-03-20"}
+{"folder": "dl.acm.org - 1987-10-01 - superoptimizer-a-look-at-the-smallest-program", "title": "Superoptimizer: a look at the smallest program", "publish": "2018-04-24"}
 {"folder": "dm13450.github.io - 2023-07-15 - stat-arb-an-easy-walkthrough", "title": "Stat Arb - An Easy Walkthrough", "publish": "2023-07-15"}
 {"folder": "dougallj.wordpress.com - 2020-01-13 - bit-twiddling-addition-with-unknown-bits", "title": "Bit-Twiddling: Addition with Unknown Bits", "publish": "2020-01-13"}
 {"folder": "drmoron.org - 2013-08-01 - lego-mechanical-computer", "title": "Lego Mechanical Computer", "publish": "2013-08-01"}
@@ -110,6 +110,7 @@
 {"folder": "eieio.games - 2025-06-24 - running-a-million-board-chess-mmo-in-a-single-process", "title": "Running a million-board chess MMO in a single process", "publish": "2025-06-24"}
 {"folder": "eli.li - 2025-08-27 - to-the-surprise-of-literally-no-one-im-working-on-implementing-a-programming-language-all-my-own", "title": "To the surprise of literally no one, I'm working on implementing a programming language all my own", "publish": "2025-08-27"}
 {"folder": "en.wikipedia.org - 2026-07-18 - ulysses-pact", "title": "Ulysses pact", "publish": "2016-07-31"}
+{"folder": "en.wikipedia.org - 2026-07-18 - xor-linked-list", "title": "XOR linked list", "publish": "2011-05-23"}
 {"folder": "entropicthoughts.com - 2021-07-31 - bayes-rule-in-odds-form", "title": "Bayes Rule in Odds Form", "publish": "2021-07-31"}
 {"folder": "entropicthoughts.com - 2022-11-04 - statistical-process-control-a-practitioners-guide", "title": "Statistical Process Control: A Practitioner's Guide", "publish": "2022-11-04"}
 {"folder": "entropicthoughts.com - 2023-09-25 - the-misunderstood-kelly-criterion", "title": "The Misunderstood Kelly Criterion", "publish": "2023-09-25"}
@@ -125,8 +126,10 @@
 {"folder": "gameprogrammingpatterns.com - 2026-07-13 - game-loop", "title": "Game Loop", "publish": null}
 {"folder": "girl.surgery - 2026-07-13 - chess-engines-do-weird-stuff", "title": "Chess Engines Do Weird Stuff", "publish": null}
 {"folder": "gist.github.com - erincandescent - 2019-07-25 - original-foreword-some-opinion", "title": "RISC-V.md", "publish": "2019-07-25"}
+{"folder": "github.com - cxli233 - 2026-07-18 - friends-dont-let-friends-make-bad-graphs", "title": "FriendsDontLetFriends/README.md at main · cxli233/FriendsDontLetFriends", "publish": "2025-09-03"}
 {"folder": "github.com - francisrstokes - 2024-05-10 - why-the-cordic-algorithm-lives-rent-free-in-my-head", "title": "githublog/2024/5/10/cordic.md at main · francisrstokes/githublog", "publish": "2024-05-11"}
 {"folder": "github.com - francisrstokes - 2024-05-29 - everything-i-know-about-the-fast-inverse-square-root-algorithm", "title": "githublog/2024/5/29/fast-inverse-sqrt.md at main · francisrstokes/githublog", "publish": "2024-05-29"}
+{"folder": "github.com - quchen - 2016-12-10 - algebraic-blindness", "title": "articles/algebraic-blindness.md at master · quchen/articles", "publish": "2023-06-12"}
 {"folder": "graphics.stanford.edu - 2005-05-05 - bit-twiddling-hacks", "title": "Bit Twiddling Hacks", "publish": "2005-05-05"}
 {"folder": "gregorygundersen.com - 2020-12-09 - why-shouldnt-i-invert-that-matrix", "title": "Why Shouldn't I Invert That Matrix?", "publish": "2020-12-09"}
 {"folder": "gregorygundersen.com - 2021-05-04 - portfolio-theory-why-diversification-matters", "title": "Portfolio Theory: Why Diversification Matters", "publish": "2021-05-04"}
@@ -255,6 +258,7 @@
 {"folder": "nightingaledvs.com - 2025-01-28 - i-stopped-using-box-plots-the-aftermath", "title": "I Stopped Using Box Plots: The Aftermath", "publish": "2025-01-28"}
 {"folder": "noahpinion.blog - 2022-09-16 - no-the-u-s-didnt-outsource-our-carbon-emissions-to-china", "title": "No, the U.S. didn't outsource our carbon emissions to China", "publish": "2022-09-16"}
 {"folder": "npopov.com - 2023-10-03 - llvm-scalar-evolution", "title": "LLVM: Scalar evolution", "publish": "2023-10-03"}
+{"folder": "nunosempere.com - 2023-08-01 - squiggle-c", "title": "squiggle.c", "publish": "2023-08-01"}
 {"folder": "nunosempere.com - 2024-02-25 - a-bayesian-nerd-snipe", "title": "A Bayesian Nerd-Snipe", "publish": "2024-02-25"}
 {"folder": "nunosempere.com - 2024-06-02 - simple-electoral-college-simulation", "title": "Simple electoral college simulation", "publish": "2024-06-02"}
 {"folder": "nunosempere.com - 2024-09-10 - whats-the-chance-your-startup-will-succeed", "title": "What's the chance your startup will succeed?", "publish": "2024-09-10"}
@@ -298,6 +302,7 @@
 {"folder": "sive.rs - 2026-07-17 - tech-independence", "title": "Tech Independence", "publish": null}
 {"folder": "smu160.github.io - 2026-03-06 - missile-defense-is-np-complete-an-optimization-odyssey", "title": "Missile Defense is NP-Complete | An Optimization Odyssey", "publish": "2026-03-06"}
 {"folder": "snf.github.io - 2019-02-13 - shared-ptr-t-the-not-always-atomic-reference-counted-smart-pointer", "title": "shared_ptr<T>: the (not always) atomic reference counted smart pointer", "publish": "2019-02-13"}
+{"folder": "sniperinmahwah.wordpress.com - 2014-09-22 - hft-in-my-backyard", "title": "HFT in my backyard", "publish": "2014-09-22"}
 {"folder": "splittinginfinity.substack.com - 2025-06-10 - replace-income-taxes-with-better-ones", "title": "Replace income taxes with better ones", "publish": "2025-06-10"}
 {"folder": "stephango.com - 2016-10-20 - 40-questions-to-ask-yourself-every-year", "title": "40 questions to ask yourself every year", "publish": "2016-10-20"}
 {"folder": "stephango.com - 2022-01-05 - 40-questions-to-ask-yourself-every-decade", "title": "40 questions to ask yourself every decade", "publish": "2022-01-05"}
@@ -317,6 +322,7 @@
 {"folder": "vercel.com - 2026-01-27 - agents-md-outperforms-skills-in-our-agent-evals", "title": "AGENTS.md outperforms skills in our agent evals", "publish": "2026-01-27"}
 {"folder": "veyronb.wordpress.com - 2011-11-22 - in-defense-of-liquidity-rebates-and-other-structures-in-the-equity-markets", "title": "In Defense of Liquidity Rebates and other Structures in the Equity Markets", "publish": "2011-11-22"}
 {"folder": "wassimulator.com - 2026-07-17 - programming-vehicles-in-games", "title": "Programming Vehicles in Games", "publish": "2021-05-15"}
+{"folder": "web.stanford.edu - 2026-07-18 - cs-168-the-modern-algorithmic-toolbox-spring-2024", "title": "CS 168: The Modern Algorithmic Toolbox, Spring 2024", "publish": null}
 {"folder": "wiki.alopex.li - 2026-07-17 - riscin2022", "title": "RiscIn2022", "publish": null}
 {"folder": "wiki.alopex.li - 2026-07-17 - riscvnotes", "title": "RiscVNotes", "publish": null}
 {"folder": "xkcd.com - 2026-07-18 - blue-eyes-the-hardest-logic-puzzle-in-the-world-solution", "title": "Blue Eyes - The Hardest Logic Puzzle in the World - Solution", "publish": null}

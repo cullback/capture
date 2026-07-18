@@ -20,6 +20,9 @@ def resolve_arxiv(url: str) -> Resolution | None:
         source=source,
         content=arxiv_content_url(aid),
         html=html,
+        # The typeset PDF is the canonical artifact; the HTML rendering
+        # only feeds the markdown conversion.
+        save_html=False,
         publish=arxiv_published(html),
         pdf_url=f"https://arxiv.org/pdf/{aid}",
     )

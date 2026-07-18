@@ -14,6 +14,8 @@ class Resolution:
     domain: str | None = None  # folder-name leading segment(s) override
     html: str = ""  # fetched identity page ("" = no HTML artifact)
     use_browser: bool = True  # single-file the content URL
+    save_html: bool = True  # keep the .html artifact (False when the
+    # canonical artifact is something else, e.g. a paper's PDF)
     publish: str | None = None  # publish date, when the source knows it
     archive: str | None = None  # snapshot URL, for archived pages
     markdown: str | None = None  # ready-made body, skipping pandoc

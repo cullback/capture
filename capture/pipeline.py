@@ -60,7 +60,7 @@ def capture(url: str) -> Path | None:
     # (jaykmody.com) while serving plain fetches fine: degrade to the
     # raw HTML as artifact.
     artifact_html = resolution.html
-    if resolution.use_browser:
+    if resolution.use_browser and resolution.save_html:
         with tempfile.TemporaryDirectory() as tmp:
             candidate = Path(tmp) / "capture.html"
             if single_file(resolution.content, candidate) and candidate.exists():
@@ -115,7 +115,7 @@ def write_capture(
     title: str,
     publish: str | None,
 ) -> Path:
-    if artifact_html:
+    if artifact_html and resolution.save_html:
         (folder / f"{name}.html").write_text(artifact_html)
 
     if resolution.download_media:
@@ -149,7 +149,15 @@ def write_capture(
         or not pandoc(resolution.content, markdown.name, folder)
         or junk_conversion(markdown)
     ):
-        pandoc(f"{name}.html", markdown.name, folder)
+        # The fallback converts the artifact file; when save_html is off
+        # it exists only for the duration of the conversion.
+        fallback = folder / f"{name}.html"
+        temporary = not fallback.exists() and bool(artifact_html)
+        if temporary:
+            fallback.write_text(artifact_html)
+        pandoc(fallback.name, markdown.name, folder)
+        if temporary:
+            fallback.unlink()
 
     markdown.write_text(frontmatter(resolution, title, publish) + markdown.read_text())
     format_markdown(markdown)
