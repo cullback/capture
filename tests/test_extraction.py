@@ -242,6 +242,21 @@ def test_existing_capture_resolves_youtube_forms(tmp_path, monkeypatch):
     assert module.existing_capture("https://youtu.be/AAAAAAAAAAA") is None
 
 
+def test_github_repo_url_forms():
+    from capture.resolvers.github import github_repo
+
+    for url in [
+        "https://github.com/scandum/rotate",
+        "https://github.com/scandum/rotate/",
+        "https://github.com/scandum/rotate.git",
+    ]:
+        assert github_repo(url) == ("scandum", "rotate")
+    # Deeper paths and non-repo routes are not repo captures
+    assert github_repo("https://github.com/o/r/blob/main/x.md") is None
+    assert github_repo("https://github.com/o/r/issues/5") is None
+    assert github_repo("https://github.com/topics/compression") is None
+
+
 def test_github_blob_markdown(monkeypatch):
     import capture.resolvers.base as base
     import capture.resolvers as module

@@ -1,7 +1,9 @@
-"""GitHub blob and gist URLs: the raw file IS the markdown."""
+"""GitHub blob, gist, and repository URLs."""
 
 import json
 import re
+import subprocess
+import tempfile
 from pathlib import Path
 from urllib.parse import urljoin
 
@@ -12,6 +14,8 @@ from capture.resolvers.base import Resolution
 def resolve_github(url: str) -> Resolution | None:
     """The markdown body comes straight from the raw file; the browser
     still archives the rendered page."""
+    if repo := github_repo(url):
+        return resolve_repo(*repo)
     gh = github_markdown(url)
     if not gh:
         return None
@@ -25,6 +29,74 @@ def resolve_github(url: str) -> Resolution | None:
         markdown=gh["markdown"],
         title=heading.group(1).strip() if heading else gh["name"],
     )
+
+
+def github_repo(url: str) -> tuple[str, str] | None:
+    """Owner and name for a repository ROOT url; deeper paths (blobs,
+    issues, pulls) are not repo captures."""
+    match = re.search(r"github\.com/([^/?#]+)/([^/?#]+?)(?:\.git)?/?(?:[?#].*)?$", url)
+    if not match or match.group(1) in ("orgs", "topics", "search", "sponsors"):
+        return None
+    return match.group(1), match.group(2)
+
+
+def resolve_repo(owner: str, repo: str) -> Resolution:
+    """README as the markdown; the source as a git bundle — one file
+    holding the complete history, re-cloneable with git clone."""
+    source = f"https://github.com/{owner}/{repo}"
+    meta = json.loads(base.fetch_html(f"https://api.github.com/repos/{owner}/{repo}"))
+    branch = meta.get("default_branch", "main")
+    readme_url = f"https://raw.githubusercontent.com/{owner}/{repo}/{branch}/README.md"
+    try:
+        readme = base.fetch_html(readme_url)
+        # Rebase relative image links onto the raw host.
+        readme = re.sub(
+            r"(!\[[^\]]*\]\()(?!https?://|#|data:)([^)\s]+)",
+            lambda m: m.group(1) + urljoin(readme_url, m.group(2)),
+            readme,
+        )
+    except base.FetchError:
+        readme = f"# {owner}/{repo}\n\n(no README)\n"
+    extra = {"description": meta.get("description") or ""}
+    if language := meta.get("language"):
+        extra["language"] = language
+    if stars := meta.get("stargazers_count"):
+        extra["stars"] = str(stars)
+    return Resolution(
+        source=source,
+        content=source,
+        domain=f"github.com - {owner}",
+        use_browser=False,
+        publish=(meta.get("created_at") or "")[:10] or None,
+        markdown=readme,
+        title=repo,
+        extra=extra,
+        download_media=lambda folder, name: bundle_repo(source, folder, name),
+    )
+
+
+def bundle_repo(source: str, folder: Path, name: str) -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        clone = subprocess.run(
+            ["git", "clone", "--quiet", "--mirror", source, f"{tmp}/mirror"],
+            capture_output=True,
+            text=True,
+        )
+        if clone.returncode != 0:
+            print(f"bundle failed: {clone.stderr.strip()[:200]}")
+            return
+        subprocess.run(
+            [
+                "git",
+                "-C",
+                f"{tmp}/mirror",
+                "bundle",
+                "create",
+                str(folder / f"{name}.bundle"),
+                "--all",
+            ],
+            capture_output=True,
+        )
 
 
 def github_markdown(url: str) -> dict | None:

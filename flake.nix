@@ -33,6 +33,7 @@
             pandoc
             yt-dlp
             ffmpeg
+            git
           ];
         };
       }
