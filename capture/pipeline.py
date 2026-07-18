@@ -30,6 +30,7 @@ from capture.extract import (
     published_date,
     slugify,
 )
+from capture.resolvers.base import find_tool
 from capture.resolvers import (
     Resolution,
     arxiv_id,
@@ -217,6 +218,12 @@ def best_submission(matches: list[dict]) -> dict:
 
 
 def single_file(url: str, output: Path) -> bool:
+    # The dotfiles single-file-archive script is the canonical home of
+    # the hardened flags; the embedded invocation is the fallback for
+    # machines without it.
+    if tool := find_tool("single-file-archive"):
+        result = subprocess.run([tool, url, str(output)])
+        return result.returncode == 0
     result = subprocess.run(
         [
             "single-file",

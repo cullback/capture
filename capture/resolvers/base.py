@@ -28,6 +28,16 @@ class Resolution:
     download_media: Callable[[Path, str], None] | None = None  # (folder, name)
 
 
+def find_tool(name: str) -> str | None:
+    """PATH lookup plus ~/.local/bin, which non-interactive shells miss."""
+    import shutil
+
+    if found := shutil.which(name):
+        return found
+    candidate = Path.home() / ".local" / "bin" / name
+    return str(candidate) if candidate.exists() else None
+
+
 def fetch_html(url: str, retry: bool = True) -> str:
     # curl rather than urllib: WAFs (e.g. AoPS) block urllib's client
     # fingerprint no matter what headers it sends.

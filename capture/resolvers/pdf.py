@@ -12,6 +12,7 @@ import tempfile
 from pathlib import Path
 from urllib.parse import unquote, urlparse
 
+from capture.resolvers import base
 from capture.resolvers.base import Resolution
 from capture.resolvers.github import markdown_heading
 
@@ -31,11 +32,8 @@ def resolve_pdf(url: str) -> Resolution | None:
     stem = unquote(Path(urlparse(url).path).stem)
     text, images = pdf_markdown(pdf)
     if text:
-        # Converters reference extracted figures as images/<name> (pdf2md)
-        # or by bare filename (marker); both land in media/.
-        text = text.replace("](images/", "](media/").replace(
-            'src="images/', 'src="media/'
-        )
+        # marker_single references figures by bare filename; pdf2md is
+        # told --media-dir media directly.
         text = re.sub(
             r"(!\[[^\]]*\]\()(?!https?://|media/)([^)\s]+)", r"\1media/\2", text
         )
@@ -90,28 +88,22 @@ def pdf_info(pdf: Path) -> dict:
     return info
 
 
-def find_tool(name: str) -> str | None:
-    """PATH lookup plus ~/.local/bin, which non-interactive shells miss."""
-    if found := shutil.which(name):
-        return found
-    candidate = Path.home() / ".local" / "bin" / name
-    return str(candidate) if candidate.exists() else None
-
-
 def pdf_markdown(pdf: Path) -> tuple[str | None, Path | None]:
     """Layout-aware conversion, best tool available: the dotfiles
     pdf2md script (Datalab Marker API — fast, GPU-backed, needs a key)
     first, a local marker_single install second, PDF-only capture
     otherwise (pdftotext scrambles multi-column reading order, so no
     cheap fallback). Returns the markdown and its figure directory."""
-    if tool := find_tool("pdf2md"):
+    if tool := base.find_tool("pdf2md"):
         out = Path(tempfile.mkdtemp())
         result = subprocess.run(
-            [tool, "-o", str(out), str(pdf)], capture_output=True, text=True
+            [tool, "-o", str(out), "--media-dir", "media", str(pdf)],
+            capture_output=True,
+            text=True,
         )
         produced = out / f"{pdf.stem}.md"
         if result.returncode == 0 and produced.exists():
-            images = out / "images"
+            images = out / "media"
             return produced.read_text(), images if images.is_dir() else None
         print(f"pdf2md failed: {result.stderr.strip()[:200]}")
         shutil.rmtree(out, ignore_errors=True)
