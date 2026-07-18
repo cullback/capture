@@ -19,6 +19,12 @@ from capture.resolvers.github import markdown_heading
 def resolve_pdf(url: str) -> Resolution | None:
     if not urlparse(url).path.lower().endswith(".pdf"):
         return None
+    return pdf_resolution(url)
+
+
+def pdf_resolution(url: str) -> Resolution | None:
+    """Download and resolve a URL that serves a PDF, however it's
+    spelled: called by extension match or by content sniffing."""
     holder = tempfile.mkdtemp()
     pdf = Path(holder) / "capture.pdf"
     fetch = subprocess.run(

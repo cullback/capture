@@ -344,6 +344,16 @@ def test_reddit_markdown_nests_comments_by_score():
     assert "> > **u/kid** (2 points)\n> > reply" in md  # nested under b
 
 
+def test_extensionless_pdf_urls_sniffed_by_content(monkeypatch):
+    import capture.resolvers.base as base
+    import capture.resolvers.default as default
+
+    monkeypatch.setattr(base, "fetch_html", lambda u: "%PDF-1.7 mangled binary")
+    sentinel = object()
+    monkeypatch.setattr(default, "pdf_resolution", lambda u: sentinel)
+    assert default.resolve_default("https://journal.example/download?id=42") is sentinel
+
+
 def test_refused_fetch_falls_back_to_browser_but_missing_stays_fatal(monkeypatch):
     import pytest
 

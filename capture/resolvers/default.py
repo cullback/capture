@@ -5,6 +5,7 @@ from urllib.parse import urlparse
 
 from capture.resolvers import base
 from capture.resolvers.base import Resolution
+from capture.resolvers.pdf import pdf_resolution
 
 ARCHIVE_HOSTS = {"archive.is", "archive.ph", "archive.today", "archive.md"}
 
@@ -27,6 +28,10 @@ def resolve_default(url: str) -> Resolution:
         # (quarter--mile.com 429s curl): let the browser supply
         # everything, including metadata.
         return Resolution(source=url, content=url)
+    if html.startswith("%PDF-"):
+        # The URL serves a PDF without saying so in its path.
+        if resolution := pdf_resolution(url):
+            return resolution
     source = original_url(url, html)
     return Resolution(
         source=source,
