@@ -29,9 +29,13 @@ def resolve_pdf(url: str) -> Resolution | None:
         return None  # not actually a PDF; let other resolvers try
     info = pdf_info(pdf)
     stem = unquote(Path(urlparse(url).path).stem)
-    text, images = marker_markdown(pdf)
+    text, images = pdf_markdown(pdf)
     if text:
-        # Marker references its extracted figures by bare filename.
+        # Converters reference extracted figures as images/<name> (pdf2md)
+        # or by bare filename (marker); both land in media/.
+        text = text.replace("](images/", "](media/").replace(
+            'src="images/', 'src="media/'
+        )
         text = re.sub(
             r"(!\[[^\]]*\]\()(?!https?://|media/)([^)\s]+)", r"\1media/\2", text
         )
@@ -86,29 +90,49 @@ def pdf_info(pdf: Path) -> dict:
     return info
 
 
-def marker_markdown(pdf: Path) -> tuple[str | None, Path | None]:
-    """Layout-aware conversion when marker is installed; (None, None)
+def find_tool(name: str) -> str | None:
+    """PATH lookup plus ~/.local/bin, which non-interactive shells miss."""
+    if found := shutil.which(name):
+        return found
+    candidate = Path.home() / ".local" / "bin" / name
+    return str(candidate) if candidate.exists() else None
+
+
+def pdf_markdown(pdf: Path) -> tuple[str | None, Path | None]:
+    """Layout-aware conversion, best tool available: the dotfiles
+    pdf2md script (Datalab Marker API — fast, GPU-backed, needs a key)
+    first, a local marker_single install second, PDF-only capture
     otherwise (pdftotext scrambles multi-column reading order, so no
     cheap fallback). Returns the markdown and its figure directory."""
-    if not shutil.which("marker_single"):
-        return None, None
-    out = Path(tempfile.mkdtemp())
-    result = subprocess.run(
-        [
-            "marker_single",
-            str(pdf),
-            "--output_format",
-            "markdown",
-            "--output_dir",
-            str(out),
-            "--disable_multiprocessing",
-        ],
-        capture_output=True,
-        text=True,
-    )
-    produced = sorted(out.rglob("*.md"))
-    if result.returncode != 0 or not produced:
+    if tool := find_tool("pdf2md"):
+        out = Path(tempfile.mkdtemp())
+        result = subprocess.run(
+            [tool, "-o", str(out), str(pdf)], capture_output=True, text=True
+        )
+        produced = out / f"{pdf.stem}.md"
+        if result.returncode == 0 and produced.exists():
+            images = out / "images"
+            return produced.read_text(), images if images.is_dir() else None
+        print(f"pdf2md failed: {result.stderr.strip()[:200]}")
+        shutil.rmtree(out, ignore_errors=True)
+    if shutil.which("marker_single"):
+        out = Path(tempfile.mkdtemp())
+        result = subprocess.run(
+            [
+                "marker_single",
+                str(pdf),
+                "--output_format",
+                "markdown",
+                "--output_dir",
+                str(out),
+                "--disable_multiprocessing",
+            ],
+            capture_output=True,
+            text=True,
+        )
+        produced = sorted(out.rglob("*.md"))
+        if result.returncode == 0 and produced:
+            return produced[0].read_text(), produced[0].parent
         print(f"marker failed: {result.stderr.strip()[:200]}")
         shutil.rmtree(out, ignore_errors=True)
-        return None, None
-    return produced[0].read_text(), produced[0].parent
+    return None, None

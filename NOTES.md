@@ -146,17 +146,20 @@ different page" mechanically crosses into guesswork, so the capture
 keeps the fallback capture-date. This is the designated trigger case
 for the LLM date fallback.
 
-## Direct PDFs: marker on CPU
+## Direct PDFs: datalab API via dotfiles pdf2md
 
 PDF URLs resolve to the PDF as the canonical artifact (pdfinfo
-metadata for date/author) plus marker-converted markdown with real TeX
-and extracted figures. Marker costs ~50s/page on the 16-core CPU
-(20-50x slower than GPU) and a one-time 3.3GB model download to
-~/.cache/datalab. Two NixOS shims were needed for the PyPI torch
-stack: LD_LIBRARY_PATH for libstdc++/zlib, and unset PYTHONPATH in the
-devshell (nixpkgs yt-dlp leaks its python3.13 closure, poisoning the
-3.12 venv). PDF titles prefer the converted document's first heading:
-pdfinfo Title is often the LaTeX source filename.
+metadata for date/author) plus layout-aware markdown. Conversion runs
+through the dotfiles `pdf2md` script (Datalab Marker API, GPU-backed,
+seconds per paper, DATALAB_API_KEY from ~/.config/datalab/key), with a
+local marker_single install as fallback and PDF-only capture as the
+floor. Local marker was tried first and worked (~50s/page on CPU,
+3.3GB model cache) but cost a 6GB torch venv and two NixOS shims
+(LD_LIBRARY_PATH for manylinux wheels; unset PYTHONPATH because
+nixpkgs yt-dlp leaks its python3.13 closure — both shims kept in the
+flake as they protect any future wheel). PDF titles prefer the
+converted document's first heading: pdfinfo Title is often the LaTeX
+source filename.
 
 ## Current fetcher matrix
 
