@@ -358,6 +358,24 @@ def test_lesswrong_wiki_urls():
     )
 
 
+def test_wikipedia_article_url_forms():
+    from capture.resolvers import wikipedia_article
+
+    assert wikipedia_article("https://en.wikipedia.org/wiki/Ulysses_pact") == (
+        "en",
+        "Ulysses_pact",
+    )
+    assert wikipedia_article("https://en.m.wikipedia.org/wiki/Ulysses_pact") == (
+        "en",
+        "Ulysses_pact",
+    )
+    assert wikipedia_article(
+        "https://de.wikipedia.org/wiki/Kognitive_Dissonanz#Geschichte"
+    ) == ("de", "Kognitive_Dissonanz")
+    assert wikipedia_article("https://en.wikipedia.org/wiki/Special:Random") is not None
+    assert wikipedia_article("https://wikipedia.org/") is None
+
+
 def test_wayback_snapshot_url_forms():
     from capture.resolvers import wayback_snapshot
 
