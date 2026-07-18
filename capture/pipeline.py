@@ -85,7 +85,9 @@ def capture(url: str) -> Path | None:
     )
     meta_html = resolution.html if informative else artifact_html
     title = resolution.title or page_title(meta_html, domain, resolution.source)
-    publish = resolution.publish or published_date(resolution.source, meta_html)
+    publish = resolution.publish or (
+        None if resolution.dateless else published_date(resolution.source, meta_html)
+    )
     name_date = publish or resolution.fallback_date or date.today().isoformat()
     slug = slugify(title) or page_slug(resolution.source, meta_html)
     name = f"{domain} - {name_date} - {slug}"

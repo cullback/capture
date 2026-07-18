@@ -8,11 +8,24 @@ as clean static HTML with the true post date and comments included.
 import re
 from datetime import datetime, timezone
 
+from capture.extract import page_title
 from capture.resolvers import base
 from capture.resolvers.base import Resolution
 
 
 def resolve_lesswrong(url: str) -> Resolution | None:
+    if wiki := lesswrong_wiki(url):
+        # Wiki pages: no single author, no publish date (they evolve),
+        # and greaterwrong titles them "Name tag".
+        html = base.fetch_html(f"https://www.greaterwrong.com/tag/{wiki}")
+        title = page_title(html, "lesswrong.com")
+        return Resolution(
+            source=f"https://www.lesswrong.com/w/{wiki}",
+            content=f"https://www.greaterwrong.com/tag/{wiki}",
+            html=html,
+            title=re.sub(r"\s+tag$", "", title) if title else None,
+            dateless=True,
+        )
     post = lesswrong_post(url)
     if not post:
         return None
@@ -44,6 +57,11 @@ def lesswrong_post(url: str) -> tuple[str, str] | None:
         url,
     )
     return (match.group(1), match.group(2)) if match else None
+
+
+def lesswrong_wiki(url: str) -> str | None:
+    match = re.search(r"(?:lesswrong\.com|greaterwrong\.com)/(?:w|tag)/([^/?#]+)", url)
+    return match.group(1) if match else None
 
 
 def author_slug(author: str) -> str:

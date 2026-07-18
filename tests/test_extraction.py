@@ -344,6 +344,20 @@ def test_lesswrong_metadata_from_greaterwrong(monkeypatch):
     assert resolution.extra["author"] == "Eliezer Yudkowsky"
 
 
+def test_lesswrong_wiki_urls():
+    from capture.resolvers.lesswrong import lesswrong_post, lesswrong_wiki
+
+    assert lesswrong_wiki("https://www.lesswrong.com/w/bayes-rule-log-odds-form") == (
+        "bayes-rule-log-odds-form"
+    )
+    assert lesswrong_wiki("https://www.greaterwrong.com/tag/forecasting") == (
+        "forecasting"
+    )
+    assert (
+        lesswrong_post("https://www.lesswrong.com/w/bayes-rule-log-odds-form") is None
+    )
+
+
 def test_wayback_snapshot_url_forms():
     from capture.resolvers import wayback_snapshot
 

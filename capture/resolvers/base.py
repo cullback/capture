@@ -22,6 +22,7 @@ class Resolution:
     pdf_url: str | None = None  # extra artifact to download
     extra: dict[str, str] = field(default_factory=dict)  # frontmatter additions
     fallback_date: str | None = None  # folder date when no publish date exists
+    dateless: bool = False  # wiki-like pages: suppress date detection
     download_media: Callable[[Path, str], None] | None = None  # (folder, name)
 
 
