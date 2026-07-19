@@ -29,7 +29,7 @@ def main() -> None:
         return
     try:
         if folder := capture(args.url, args.origin):
-            print(folder)
+            print(f"data/{folder.name}")
     except RuntimeError as error:
         sys.exit(f"capture failed: {error}")
 

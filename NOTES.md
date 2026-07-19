@@ -171,6 +171,20 @@ emails) and occasional invention (speculative mermaid diagrams for
 figures, added diacritics). Equations sampled clean in both. The PDF
 in each capture is ground truth for anything load-bearing.
 
+## Silent browser degradation (puppeteer's default executable)
+
+A wikipedia batch produced captures whose HTML artifact was the plain
+fetch, with only a "browser capture failed" warning to show for it.
+The dotfiles single-file-archive script never passed
+`--browser-executable-path`, so puppeteer looked for a binary named
+`chrome` — which NixOS doesn't provide — and it had only ever worked
+when chromium happened to resolve some other way. The script now
+detects chromium/chromium-browser/google-chrome-stable on PATH
+(`dotfiles/scripts/single_file.fish`). Corollary: captures must run
+inside the devShell (`nix develop`), which supplies chromium and
+single-file; outside it the pipeline degrades rather than fails, so
+watch for that warning line in batch output.
+
 ## Current fetcher matrix
 
 | Fetcher                  | Runs JS | Fingerprint                    | Role                                  |
