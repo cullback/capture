@@ -1,7 +1,6 @@
 """CLI entry point: capture a web page into a destination folder."""
 
 import argparse
-import os
 import shutil
 import sys
 from pathlib import Path
@@ -17,13 +16,12 @@ def main() -> None:
         "the typeset PDF for papers, archival video for YouTube, a git bundle\n"
         "for repos) plus a markdown conversion with YAML frontmatter.",
         epilog="environment:\n"
-        "  CAPTURE_CORPUS   main archive directory; captures already there are\n"
-        "                   copied to the destination instead of re-scraped\n"
         "  DATALAB_API_KEY  Datalab Marker key for PDF-to-markdown conversion\n"
         "                   (default: read from ~/.config/datalab/key)\n"
         "\n"
         "examples:\n"
         "  capture https://example.com/post -o ~/notes\n"
+        "  capture https://example.com/post -o ~/notes --corpus ~/archive\n"
         "  capture ./paper.pdf --origin https://publisher.example/paper",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
@@ -45,6 +43,12 @@ def main() -> None:
         help="destination directory for the capture folder"
         " (default: current directory)",
     )
+    parser.add_argument(
+        "--corpus",
+        type=Path,
+        help="main archive directory; captures already there are copied to"
+        " the destination instead of re-scraped",
+    )
     args = parser.parse_args()
     destination = (args.output or Path.cwd()).resolve()
     lookup = args.origin or args.url
@@ -53,21 +57,22 @@ def main() -> None:
         print("pass -f / --force to re-capture")
         return
     try:
-        if folder := corpus_copy(lookup, destination, args.force) or capture(
-            args.url, args.origin, destination
+        if folder := corpus_copy(lookup, destination, args.corpus, args.force) or (
+            capture(args.url, args.origin, destination)
         ):
             print(display_path(folder))
     except RuntimeError as error:
         sys.exit(f"capture failed: {error}")
 
 
-def corpus_copy(lookup: str, destination: Path, force: bool) -> Path | None:
-    """The capture already in the CAPTURE_CORPUS archive, copied to the
+def corpus_copy(
+    lookup: str, destination: Path, corpus: Path | None, force: bool
+) -> Path | None:
+    """The capture already in the --corpus archive, copied to the
     destination rather than scraped from the site again."""
-    corpus = os.environ.get("CAPTURE_CORPUS")
-    if force or not corpus or Path(corpus).resolve() == destination:
+    if force or not corpus or corpus.resolve() == destination:
         return None
-    if existing := existing_capture(lookup, Path(corpus)):
+    if existing := existing_capture(lookup, corpus):
         folder = Path(
             shutil.copytree(existing, destination / existing.name, dirs_exist_ok=True)
         )

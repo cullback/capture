@@ -100,7 +100,7 @@ already captured: bernsteinbear.com - 2026-02-25 - a-fuzzer-for-the-toy-optimize
 pass -f / --force to re-capture
 ```
 
-When `CAPTURE_CORPUS` points at a main archive (this repo's `data/`),
+When `--corpus` points at a main archive (this repo's `data/`),
 capturing to some other destination copies an existing capture from the
 corpus instead of scraping the site again.
 
