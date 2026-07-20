@@ -12,7 +12,20 @@ from capture.pipeline import capture, existing_capture
 def main() -> None:
     parser = argparse.ArgumentParser(
         prog="capture",
-        description="Save a page as a faithful HTML archive plus clean markdown.",
+        description="Save a URL or local PDF as a self-contained archive folder:\n"
+        "the content in its most faithful form (single-file HTML for pages,\n"
+        "the typeset PDF for papers, archival video for YouTube, a git bundle\n"
+        "for repos) plus a markdown conversion with YAML frontmatter.",
+        epilog="environment:\n"
+        "  CAPTURE_CORPUS   main archive directory; captures already there are\n"
+        "                   copied to the destination instead of re-scraped\n"
+        "  DATALAB_API_KEY  Datalab Marker key for PDF-to-markdown conversion\n"
+        "                   (default: read from ~/.config/datalab/key)\n"
+        "\n"
+        "examples:\n"
+        "  capture https://example.com/post -o ~/notes\n"
+        "  capture ./paper.pdf --origin https://publisher.example/paper",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument("url", help="page URL, or a local PDF path to ingest")
     parser.add_argument(
