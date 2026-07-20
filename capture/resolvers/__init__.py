@@ -23,7 +23,11 @@ from capture.resolvers.reddit import (
 )
 from capture.resolvers.lesswrong import lesswrong_post, resolve_lesswrong
 from capture.resolvers.pdf import resolve_pdf
-from capture.resolvers.wayback import resolve_wayback, wayback_snapshot
+from capture.resolvers.wayback import (
+    resolve_wayback,
+    wayback_fallback,
+    wayback_snapshot,
+)
 from capture.resolvers.wikipedia import resolve_wikipedia, wikipedia_article
 from capture.resolvers.youtube import resolve_youtube, youtube_id
 
@@ -69,6 +73,7 @@ __all__ = [
     "resolve_wayback",
     "resolve_wikipedia",
     "resolve_youtube",
+    "wayback_fallback",
     "wayback_snapshot",
     "wikipedia_article",
     "youtube_id",
