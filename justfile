@@ -28,4 +28,4 @@ test:
 
 # Save a page as faithful HTML archive + clean markdown in data/
 capture url *flags:
-    uv run python -m capture {{ flags }} '{{ url }}'
+    uv run python -m capture -o '{{ justfile_directory() }}/data' {{ flags }} '{{ url }}'

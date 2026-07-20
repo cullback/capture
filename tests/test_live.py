@@ -11,8 +11,8 @@ from capture.pipeline import capture
 pytestmark = pytest.mark.live
 
 
-def test_capture_end_to_end():
-    folder = capture("https://bernsteinbear.com/blog/toy-fuzzer/")
+def test_capture_end_to_end(tmp_path):
+    folder = capture("https://bernsteinbear.com/blog/toy-fuzzer/", destination=tmp_path)
     assert folder is not None
     assert (
         folder.name == "bernsteinbear.com - 2026-02-25 - a-fuzzer-for-the-toy-optimizer"

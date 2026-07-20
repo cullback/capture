@@ -7,11 +7,11 @@ script (Datalab Marker API), a hard dependency.
 import re
 import shutil
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 from urllib.parse import unquote, urlparse
 
-from capture.resolvers import base
 from capture.resolvers.base import Resolution
 from capture.resolvers.github import markdown_heading
 
@@ -121,15 +121,20 @@ def pdf_info(pdf: Path) -> dict:
 
 
 def pdf_markdown(pdf: Path) -> tuple[str, Path | None]:
-    """Layout-aware conversion via the dotfiles pdf2md script (Datalab
-    Marker API). A hard dependency: raises when the script is missing
-    or conversion fails."""
-    tool = base.find_tool("pdf2md")
-    if not tool:
-        raise RuntimeError("pdf2md not found (dotfiles ~/.local/bin)")
+    """Layout-aware conversion via the packaged pdf2md module (Datalab
+    Marker API). A hard dependency: raises when conversion fails."""
     out = Path(tempfile.mkdtemp())
     result = subprocess.run(
-        [tool, "-o", str(out), "--media-dir", "media", str(pdf)],
+        [
+            sys.executable,
+            "-m",
+            "capture.pdf2md",
+            "-o",
+            str(out),
+            "--media-dir",
+            "media",
+            str(pdf),
+        ],
         capture_output=True,
         text=True,
     )

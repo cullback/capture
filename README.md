@@ -1,24 +1,31 @@
 # Capture
 
-A CLI that saves a web page as a local archive: a single-file HTML copy plus
-a markdown conversion with YAML frontmatter, one folder per capture under
-`data/`.
+A CLI that saves a URL or local PDF as a self-contained archive folder,
+holding the content in its most faithful form — a single-file HTML copy for
+web pages, the typeset PDF for papers, archival video for YouTube, a git
+bundle for repos — plus, for anything textual, a markdown conversion with
+YAML frontmatter.
 
 ## Usage
 
 ```
-$ just capture https://bernsteinbear.com/blog/toy-fuzzer/
-data/bernsteinbear.com - 2026-02-25 - a-fuzzer-for-the-toy-optimizer
+$ capture https://bernsteinbear.com/blog/toy-fuzzer/
+bernsteinbear.com - 2026-02-25 - a-fuzzer-for-the-toy-optimizer
 ```
 
-That prints the capture folder, which contains:
+That prints the capture folder, created in the current directory (or
+wherever `-o` points), which contains:
 
 ```
-data/bernsteinbear.com - 2026-02-25 - a-fuzzer-for-the-toy-optimizer/
+bernsteinbear.com - 2026-02-25 - a-fuzzer-for-the-toy-optimizer/
 ├── bernsteinbear.com - 2026-02-25 - a-fuzzer-for-the-toy-optimizer.html
 ├── bernsteinbear.com - 2026-02-25 - a-fuzzer-for-the-toy-optimizer.md
 └── media/
 ```
+
+The flake installs the `capture` command: `nix profile install .` from a
+checkout, or ad hoc `nix run . -- <url>`. Within this repo,
+`just capture <url>` passes `-o data/` to grow the resident corpus.
 
 Folder names follow `<domain> - <date> - <slug>`, ASCII only. The date comes
 from the page's publish date and falls back to the capture date when no
@@ -27,7 +34,7 @@ publish date exists.
 The `.html` file comes from [SingleFile](https://github.com/gildas-lormeau/single-file-cli)
 driven by headless chromium: one file with styles and images inlined, rendering
 offline as the page looked. The `.md` file holds the body converted by
-[pandoc](https://pandoc.org/) through `filters/clean.lua`, which restores KaTeX
+[pandoc](https://pandoc.org/) through `capture/filters/clean.lua`, which restores KaTeX
 display math to TeX, unwraps single-cell layout tables, and fences code blocks.
 [dprint](https://dprint.dev/) formats the result. `media/` holds downloaded
 images, referenced relatively.
@@ -74,7 +81,7 @@ means adding a module under `capture/resolvers/` and registering it in
 Some publisher pages resist automation harder than a manual download costs:
 
 ```
-just capture ./paper.pdf --origin https://publisher.example/paper
+capture ./paper.pdf --origin https://publisher.example/paper
 ```
 
 `--origin` supplies provenance: the frontmatter `url`, the domain in the
@@ -83,36 +90,48 @@ folder name, and the dedup identity. Without it the capture files under
 
 ## Re-capturing
 
-Dedup matches the URL against existing frontmatter, after normalizing
-per-source spellings so any arxiv, youtube, reddit, wayback, or lesswrong
-variant finds its canonical capture:
+Dedup matches the URL against the frontmatter already at the destination,
+after normalizing per-source spellings so any arxiv, youtube, reddit,
+wayback, or lesswrong variant finds its canonical capture:
 
 ```
-$ just capture https://bernsteinbear.com/blog/toy-fuzzer/
+$ capture https://bernsteinbear.com/blog/toy-fuzzer/
 already captured: bernsteinbear.com - 2026-02-25 - a-fuzzer-for-the-toy-optimizer
 pass -f / --force to re-capture
 ```
 
+When `CAPTURE_CORPUS` points at a main archive (this repo's `data/`),
+capturing to some other destination copies an existing capture from the
+corpus instead of scraping the site again.
+
 ## Failure behavior
 
-A failed capture leaves nothing in `data/`. The pipeline skips paywalled
+A failed capture leaves nothing at the destination. The pipeline skips paywalled
 pages that only serve a preview and prints why. 4xx/5xx responses and
 bot-check interstitials served with HTTP 200 raise instead of archiving the
-error page; 5xx responses get one retry after 3 seconds.
+error page; 5xx responses get one retry after 3 seconds. When a bot check
+blocks both curl and the browser archive, the pipeline asks the Wayback
+Machine for its newest successful crawl of the URL and captures that
+snapshot instead — dl.acm.org PDFs arrive this way, named for the original
+URL with the snapshot recorded under `archive`.
 
 ## Requirements
 
-Everything runs inside the nix devShell, via `nix develop` or direnv. The
-shell provides chromium, single-file-cli, pandoc, yt-dlp, ffmpeg,
-poppler-utils, and dprint; outside it the browser archive fails and captures
-degrade to the plain curl fetch.
+The flake builds an installed tool (`nix profile install`, `nix run`) whose
+wrapper carries every binary the pipeline shells out to: chromium,
+single-file-cli, pandoc, yt-dlp, ffmpeg, poppler-utils, dprint, git, curl,
+and fish. For development, the devShell (`nix develop` or direnv) provides
+the same set; outside either, the browser archive fails and captures degrade
+to the plain curl fetch.
 
-Two dotfiles scripts in `~/.local/bin` act as hard dependencies:
+The pipeline's helper scripts ship inside the package:
 
-- `single-file-archive` — SingleFile plus the hardened chromium flags that
-  pass Cloudflare's headless detection. The flags live there canonically.
-- `pdf2md` — PDF-to-markdown via the [Datalab Marker API](https://www.datalab.to/),
-  reading the key from `~/.config/datalab/key`.
+- `capture/scripts/single-file-archive` — SingleFile plus the hardened
+  chromium flags that pass Cloudflare's headless detection. The flags live
+  there canonically.
+- `pdf2md` (also installed as its own command) — PDF-to-markdown via the
+  [Datalab Marker API](https://www.datalab.to/), reading the key from
+  `DATALAB_API_KEY` or `~/.config/datalab/key`.
 
 Optional: Netscape-format cookies at `~/.config/capture/youtube-cookies.txt`
 for age-restricted or member-only videos.
@@ -149,4 +168,5 @@ failure, the diagnosis, and where the fix lives.
 ## Development
 
 `just` lists the recipes: `bootstrap` syncs dependencies, `check` runs
-dprint, ruff, pyright, and nixfmt, `format` fixes what it can.
+dprint, ruff, pyright, and nixfmt, `format` fixes what it can, and
+`capture` runs the CLI from source with `-o data/`.

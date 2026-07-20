@@ -229,17 +229,22 @@ def test_youtube_id_from_url_forms():
     assert youtube_id("https://www.youtube.com/@somechannel") is None
 
 
-def test_existing_capture_resolves_youtube_forms(tmp_path, monkeypatch):
+def test_existing_capture_resolves_youtube_forms(tmp_path):
     import capture.pipeline as module
 
-    monkeypatch.setattr(module, "REPO_ROOT", tmp_path)
     folder = tmp_path / "data" / "youtube.com - 2005-04-23 - me-at-the-zoo"
     folder.mkdir(parents=True)
     (folder / "youtube.com - 2005-04-23 - me-at-the-zoo.info.json").write_text(
         '{"id": "jNQXAC9IVRw", "title": "Me at the zoo"}'
     )
-    assert module.existing_capture("https://youtu.be/jNQXAC9IVRw") == folder
-    assert module.existing_capture("https://youtu.be/AAAAAAAAAAA") is None
+    assert (
+        module.existing_capture("https://youtu.be/jNQXAC9IVRw", tmp_path / "data")
+        == folder
+    )
+    assert (
+        module.existing_capture("https://youtu.be/AAAAAAAAAAA", tmp_path / "data")
+        is None
+    )
 
 
 def test_localize_images(tmp_path, monkeypatch):
@@ -633,26 +638,32 @@ def test_normalize_ignores_www_scheme_and_trailing_slash():
     )
 
 
-def test_existing_capture_matches_frontmatter_url(tmp_path, monkeypatch):
+def test_existing_capture_matches_frontmatter_url(tmp_path):
     import capture.pipeline as module
 
-    monkeypatch.setattr(module, "REPO_ROOT", tmp_path)
     folder = tmp_path / "data" / "example.com - 2025-01-01 - post"
     folder.mkdir(parents=True)
     (folder / "example.com - 2025-01-01 - post.md").write_text(
         '---\ntitle: "Post"\nurl: https://example.com/post/\n---\n'
     )
-    assert module.existing_capture("https://www.example.com/post") == folder
-    assert module.existing_capture("https://example.com/other") is None
+    assert (
+        module.existing_capture("https://www.example.com/post", tmp_path / "data")
+        == folder
+    )
+    assert (
+        module.existing_capture("https://example.com/other", tmp_path / "data") is None
+    )
 
 
-def test_existing_capture_resolves_arxiv_forms(tmp_path, monkeypatch):
+def test_existing_capture_resolves_arxiv_forms(tmp_path):
     import capture.pipeline as module
 
-    monkeypatch.setattr(module, "REPO_ROOT", tmp_path)
     folder = tmp_path / "data" / "arxiv.org - 2026-03-23 - paper"
     folder.mkdir(parents=True)
     (folder / "arxiv.org - 2026-03-23 - paper.md").write_text(
         "---\nurl: https://arxiv.org/abs/2603.21852\n---\n"
     )
-    assert module.existing_capture("https://arxiv.org/pdf/2603.21852v2") == folder
+    assert (
+        module.existing_capture("https://arxiv.org/pdf/2603.21852v2", tmp_path / "data")
+        == folder
+    )

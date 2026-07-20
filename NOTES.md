@@ -2,9 +2,8 @@
 
 Case log of pages that broke the pipeline and the fixes they forced.
 Each entry names the failure, the diagnosis, and where the fix lives.
-When a new page defeats every trick here, that marks the point to
-escalate to a stealth browser like zendriver (CDP-based, no webdriver
-fingerprint, can carry real profile cookies).
+dl.acm.org was the page that defeated every fetcher; the fix was the
+Wayback Machine fallback, not a stealth browser (see its entry below).
 
 ## artofproblemsolving.com (Cloudflare + client-rendered SPA)
 
@@ -180,18 +179,58 @@ The dotfiles single-file-archive script never passed
 `chrome` — which NixOS doesn't provide — and it had only ever worked
 when chromium happened to resolve some other way. The script now
 detects chromium/chromium-browser/google-chrome-stable on PATH
-(`dotfiles/scripts/single_file.fish`). Corollary: captures must run
-inside the devShell (`nix develop`), which supplies chromium and
-single-file; outside it the pipeline degrades rather than fails, so
-watch for that warning line in batch output.
+(`capture/scripts/single-file-archive`, since moved in from dotfiles).
+Corollary: captures must run inside the devShell (`nix develop`) or
+the installed flake app, which supply chromium and single-file;
+outside them the pipeline degrades rather than fails, so watch for
+that warning line in batch output.
+
+## dl.acm.org (Cloudflare that de-automation flags can't pass)
+
+The first page to defeat both fetchers, resolved by the Wayback
+Machine rather than a stealth browser. Findings:
+
+1. **curl gets a decoy, not a challenge.** ACM serves curl HTTP 200
+   with a 33KB site shell — empty `<title>`, no challenge markers — so
+   neither content sniffing nor `challenge_page` fires at resolve
+   time. On other requests it 403s. Either way the PDF never arrives.
+2. **single-file's chromium gets "Just a moment..."** The
+   de-automation flags that pass AoPS's Cloudflare don't pass ACM's.
+   This is where the failure finally becomes detectable: the pipeline's
+   bot-check gate on the archived artifact.
+3. **zendriver would work, but wasn't worth it.** A stealth-browser
+   spike did fetch the PDF (the challenge clears invisibly; an in-page
+   `fetch()` carrying the clearance cookies returns it — a trick from
+   revv2's study downloader). Reverted: it was the project's first
+   Python dependency (plus ~8 transitive), for one site, in an
+   arms race Cloudflare updates and snapshots don't.
+4. **The Wayback Machine already got through.** Its crawler holds real
+   200 PDF snapshots between the 403s. Fix, following the
+   reddit→Arctic Shift pattern of sidestepping rather than fighting:
+   when the bot-check gate would raise, `wayback_fallback` asks the
+   CDX API for the newest statuscode-200 snapshot and recaptures
+   through it (`capture/resolvers/wayback.py`). The wayback resolver
+   now also sniffs `%PDF-` snapshots and routes them through the PDF
+   path under the original URL's identity, so the folder is named for
+   dl.acm.org and the frontmatter keeps `url:` original plus
+   `archive:` snapshot.
+
+The fallback rescues anything wayback crawled successfully, PDF or
+HTML. A bot-checked page with no lucky snapshot still fails; the
+remaining outs are a manual download (`--origin`) or, if it ever earns
+its dependency, zendriver.
 
 ## Current fetcher matrix
 
 | Fetcher                  | Runs JS | Fingerprint                    | Role                                  |
 | ------------------------ | ------- | ------------------------------ | ------------------------------------- |
-| curl                     | no      | passes every WAF met so far    | identity HTML, archive.today artifact |
+| curl                     | no      | passes every WAF except ACM's  | identity HTML, archive.today artifact |
 | chromium via single-file | yes     | needs de-automation flags      | rendered archive, SPA fallback        |
 | pandoc's HTTP client     | no      | weakest; blocked by archive.is | URL conversion, image downloads       |
+
+When every fetcher loses, the Wayback Machine's own crawl stands in
+(`wayback_fallback`), and after that a manual browser download via
+`--origin`.
 
 Every regression above has a matching test in
 `tests/test_extraction.py`.

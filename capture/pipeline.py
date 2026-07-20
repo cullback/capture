@@ -1,8 +1,8 @@
 """The capture pipeline: resolve, archive, convert, describe.
 
-Each capture lands in its own folder:
+Each capture lands in its own folder under the destination:
 
-    data/<domain> - <yyyy-mm-dd> - <slug>/
+    <domain> - <yyyy-mm-dd> - <slug>/
         <same name>.html   faithful single-file archive
         <same name>.md     markdown with TeX math preserved
         <same name>.pdf    canonical PDF, for sources that have one
@@ -30,23 +30,27 @@ from capture.extract import (
     published_date,
     slugify,
 )
-from capture.resolvers.base import find_tool
 from capture.resolvers import (
     Resolution,
     arxiv_id,
     lesswrong_post,
     reddit_thread,
     resolve,
+    wayback_fallback,
     wayback_snapshot,
     youtube_id,
 )
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
+# Everything the pipeline needs at runtime ships inside the package,
+# so an installed capture works the same as a repo checkout.
+PACKAGE = Path(__file__).resolve().parent
 
 PANDOC_FORMAT = "html+tex_math_dollars+tex_math_single_backslash"
 
 
-def capture(url: str, origin: str | None = None) -> Path | None:
+def capture(
+    url: str, origin: str | None = None, destination: Path | None = None
+) -> Path | None:
     target = Path(url)
     if target.is_file():
         from capture.resolvers.pdf import resolve_local_pdf
@@ -61,7 +65,7 @@ def capture(url: str, origin: str | None = None) -> Path | None:
         "www."
     )
 
-    # single-file archives to a temp path outside data/, since the
+    # single-file archives to a temp path outside the destination, since the
     # folder name may depend on metadata that only exists after
     # rendering. Some sites stall headless chromium's navigation forever
     # (jaykmody.com) while serving plain fetches fine: degrade to the
@@ -82,7 +86,13 @@ def capture(url: str, origin: str | None = None) -> Path | None:
         raise RuntimeError(f"every fetcher failed for {url}")
     if resolution.markdown is None and challenge_page(artifact_html):
         # Bot checks served with HTTP 200 (steamdb) dodge the status
-        # check; nothing real was fetched.
+        # check; nothing real was fetched. The Wayback Machine may hold
+        # a real copy from a luckier crawl (dl.acm.org PDFs): recapture
+        # through the newest snapshot, which keeps the original URL's
+        # identity for naming, frontmatter, and dedup.
+        if snapshot := wayback_fallback(url):
+            print(f"bot check defeated the archive; capturing {snapshot}")
+            return capture(snapshot, destination=destination)
         raise RuntimeError(f"bot-check interstitial instead of content for {url}")
 
     # Client-rendered pages (e.g. AoPS, Obsidian Publish) serve a shell:
@@ -101,7 +111,7 @@ def capture(url: str, origin: str | None = None) -> Path | None:
     name = f"{domain} - {name_date} - {slug}"
     # Folder and file names stay ASCII: transliterate, then drop the rest.
     name = unicodedata.normalize("NFKD", name).encode("ascii", "ignore").decode()
-    folder = REPO_ROOT / "data" / name
+    folder = (destination or Path.cwd()) / name
     fresh = not folder.exists()
     folder.mkdir(parents=True, exist_ok=True)
     try:
@@ -227,12 +237,10 @@ def best_submission(matches: list[dict]) -> dict:
 
 
 def single_file(url: str, output: Path) -> bool:
-    # The dotfiles single-file-archive script is the canonical home of
-    # the hardened browser flags, and a hard dependency.
-    tool = find_tool("single-file-archive")
-    if not tool:
-        raise RuntimeError("single-file-archive not found (dotfiles ~/.local/bin)")
-    result = subprocess.run([tool, url, str(output)])
+    # The packaged script is the canonical home of the hardened browser
+    # flags. Invoked through fish explicitly: wheels drop execute bits.
+    script = PACKAGE / "scripts" / "single-file-archive"
+    result = subprocess.run(["fish", str(script), url, str(output)])
     return result.returncode == 0
 
 
@@ -246,7 +254,7 @@ def pandoc(source: str, output: str, cwd: Path) -> bool:
             "-t",
             "gfm-raw_html",
             "--wrap=none",
-            f"--lua-filter={REPO_ROOT / 'filters' / 'clean.lua'}",
+            f"--lua-filter={PACKAGE / 'filters' / 'clean.lua'}",
             "--extract-media=media",
             source,
             "-o",
@@ -314,24 +322,31 @@ def junk_conversion(markdown: Path) -> bool:
 
 
 def format_markdown(markdown: Path) -> None:
-    # Via stdin with a path outside data/, since dprint.json excludes
-    # data/ to keep repo-wide `just format` off the captures.
+    # Via stdin against the packaged config, so formatting doesn't
+    # depend on whatever dprint.json the working directory carries.
     result = subprocess.run(
-        ["dprint", "fmt", "--stdin", "capture.md"],
+        [
+            "dprint",
+            "fmt",
+            "--config",
+            str(PACKAGE / "markdown-fmt.json"),
+            "--stdin",
+            "capture.md",
+        ],
         input=markdown.read_text(),
         capture_output=True,
         text=True,
-        cwd=REPO_ROOT,
     )
     if result.returncode == 0 and result.stdout:
         markdown.write_text(result.stdout)
 
 
-def existing_capture(url: str) -> Path | None:
+def existing_capture(url: str, root: Path | None = None) -> Path | None:
     """The folder already holding this URL, matched via frontmatter."""
+    root = root or Path.cwd()
     if vid := youtube_id(url):
         # Video captures have no markdown; match the id in info.json.
-        for info in sorted((REPO_ROOT / "data").glob("*/*.info.json")):
+        for info in sorted(root.glob("*/*.info.json")):
             if f'"id": "{vid}"' in info.read_text(errors="replace"):
                 return info.parent
         return None
@@ -346,7 +361,7 @@ def existing_capture(url: str) -> Path | None:
         target = normalize(snapshot[1])
     elif post := lesswrong_post(url):
         target = normalize(f"https://www.lesswrong.com/posts/{post[0]}/{post[1]}")
-    for markdown in sorted((REPO_ROOT / "data").glob("*/*.md")):
+    for markdown in sorted(root.glob("*/*.md")):
         header = markdown.read_text(errors="replace")[:600]
         for line in header.splitlines():
             key, _, value = line.partition(": ")
