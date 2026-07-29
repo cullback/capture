@@ -19,6 +19,10 @@ class Resolution:
     publish: str | None = None  # publish date, when the source knows it
     archive: str | None = None  # snapshot URL, for archived pages
     markdown: str | None = None  # ready-made body, skipping pandoc
+    article_html: str = ""  # canonical article HTML to convert instead of
+    # the page, for sources that serve the piece free of their own chrome
+    markdown_suffix: str = ""  # appended after the body, however it was
+    # produced (substack comments, which the page itself does not serve)
     skip_markdown: bool = False  # media captures describe themselves
     title: str | None = None  # title override
     pdf_url: str | None = None  # extra artifact to download

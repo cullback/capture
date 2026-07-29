@@ -563,6 +563,70 @@ def test_github_repo_ignores_wiki_urls():
     assert github_repo("https://github.com/o/r/wiki/Some-Page") is None
 
 
+def test_substack_post_slug_forms():
+    from capture.resolvers.substack import post_slug
+
+    # Custom domains are the common case: nothing in the host says
+    # substack, but every post lives at /p/<slug>.
+    assert post_slug(
+        "https://www.construction-physics.com/p/the-story-of-titanium"
+    ) == ("the-story-of-titanium")
+    assert post_slug("https://x.substack.com/p/a-post/") == "a-post"
+    assert post_slug("https://x.substack.com/p/a-post?utm_source=share") == "a-post"
+    # Not posts: archives, comment pages, and unrelated sites
+    assert post_slug("https://x.substack.com/archive") is None
+    assert post_slug("https://x.substack.com/p/a-post/comments") is None
+    assert post_slug("https://bernsteinbear.com/blog/ssa/") is None
+
+
+def test_substack_renders_the_nested_thread():
+    from capture.resolvers.substack import render_comments
+
+    # The API returns children already nested, unlike reddit's flat list.
+    comments = [
+        {
+            "name": "gwern",
+            "date": "2023-07-21T21:47:47.416Z",
+            "reaction_count": 3,
+            "body": "First line\nsecond line",
+            "children": [
+                {
+                    "name": "replier",
+                    "date": "2023-07-22T00:00:00.000Z",
+                    "reaction_count": 0,
+                    "body": "A reply",
+                    "children": [],
+                }
+            ],
+        },
+        {"name": "ghost", "deleted": True, "body": "gone", "children": []},
+    ]
+    out = render_comments(comments, total=122)
+    # The advertised count is kept: it includes what the API paginates away
+    assert "## Comments (122)" in out
+    assert "> **gwern** (2023-07-21, 3 reactions)" in out
+    assert "> First line" in out and "> second line" in out
+    # Depth is blockquote nesting, as in the reddit renderer
+    assert "> > **replier** (2023-07-22)" in out
+    assert "> > A reply" in out
+    # Deleted comments contribute nothing
+    assert "gone" not in out
+
+
+def test_substack_comment_count_falls_back_to_the_tree():
+    from capture.resolvers.substack import count, render_comments
+
+    nested = [
+        {
+            "name": "a",
+            "body": "x",
+            "children": [{"name": "b", "body": "y", "children": []}],
+        }
+    ]
+    assert count(nested) == 2
+    assert "## Comments (2)" in render_comments(nested)
+
+
 def test_reddit_thread_url_forms():
     from capture.resolvers import reddit_thread
 

@@ -60,12 +60,9 @@ If that stops, the fallback is a stealth browser with real cookies.
 
 ## Lesser fights
 
-- **Substack**: works. Server-rendered with JSON-LD dates. Long list
-  posts split into multiple `<ol>` blocks, so numbering restarts
-  mid-post on the live page too; the markdown mirrors the site. About
-  30 lines of subscribe/share chrome leak into the markdown. Paywalled
-  posts (Substack's only_paid audience marker) are detected and
-  skipped without writing anything: only a preview is public.
+- **Substack**: now has its own resolver, see below. Paywalled posts
+  (Substack's only_paid audience marker) are detected and skipped
+  without writing anything: only a preview is public.
 - **austinhenley.com**: no date metadata anywhere; the date appears
   only as `<small>8/31/2025</small>` body text, which forced the
   US-slash-date tier of `body_date`. Older posts lack og:title and
@@ -179,6 +176,31 @@ means nothing"). It is deliberately left out of the backfill: lobsters
 starts answering 429 after a few dozen searches, and sweeping a small
 volunteer-run site 524 times is not a reasonable thing to do to it.
 New captures pick it up one query at a time.
+
+## Substack: the page is the wrong source
+
+Substack server-renders two comments and loads the rest on scroll, so
+an archived page ends in "[96 more comments...]" and keeps 2 of 122.
+Across the corpus that was 58 comments kept and 1250 lost, worst cases
+`usefulfictions` (117 missing), `andymasley` (96), `sebastianraschka`
+(95), `noahpinion` (93).
+
+Detection cannot use the hostname: most Substacks worth reading run on
+their own domain, and `construction-physics.com`, `noahpinion.blog`,
+`benlandautaylor.com`, `thepalindrome.org` and `computerenhance.com`
+say nothing about Substack. Every post does live at `/p/<slug>`, so the
+path gates the check and `window._preloads` in the HTML confirms it —
+no extra fetch for the rest of the web.
+
+The first attempt appended comments to the converted page and
+duplicated the two the page renders. The fix was to stop converting the
+page at all: `/api/v1/posts/<slug>` returns `body_html`, the piece with
+no nav, no subscribe furniture, and no comments, which also retired the
+~30 lines of chrome this file used to complain about. Hence
+`Resolution.article_html` — convert what the source says the article
+is, rather than converting the page and subtracting furniture. On
+`the-story-of-titanium`: body 4783w of article-plus-chrome became 4495w
+of article, plus 1285w of all 21 comments.
 
 ## Code blocks and formatting
 

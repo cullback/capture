@@ -207,6 +207,13 @@ def write_capture(
     markdown = folder / f"{name}.md"
     if resolution.markdown is not None:
         markdown.write_text(localize_images(resolution.markdown, folder))
+    elif resolution.article_html:
+        # The source hands over the piece without its page chrome, which
+        # beats converting the rendered page and subtracting furniture.
+        article = folder / "article.html"
+        article.write_text(resolution.article_html)
+        pandoc(article.name, markdown.name, folder)
+        article.unlink()
     elif (
         not resolution.use_browser
         or not pandoc(resolution.content, markdown.name, folder)
@@ -222,7 +229,12 @@ def write_capture(
         if temporary:
             fallback.unlink()
 
-    markdown.write_text(frontmatter(resolution, title, publish) + markdown.read_text())
+    body = markdown.read_text()
+    if resolution.markdown_suffix:
+        # Content the page withholds from its own HTML — substack serves
+        # two comments and lazy-loads the rest.
+        body = body.rstrip("\n") + "\n" + resolution.markdown_suffix
+    markdown.write_text(frontmatter(resolution, title, publish) + body)
     format_markdown(markdown)
     return folder
 

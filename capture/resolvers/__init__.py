@@ -20,6 +20,10 @@ from capture.resolvers.hackernews import (
     hackernews_markdown,
     resolve_hackernews,
 )
+from capture.resolvers.substack import (
+    render_comments,
+    resolve_substack,
+)
 from capture.resolvers.reddit import (
     reddit_comments,
     reddit_markdown,
@@ -45,6 +49,7 @@ RESOLVERS = [
     resolve_wayback,
     resolve_lesswrong,
     resolve_wikipedia,
+    resolve_substack,
     resolve_pdf,
 ]
 
@@ -80,7 +85,9 @@ __all__ = [
     "resolve_hackernews",
     "resolve_lesswrong",
     "resolve_pdf",
+    "render_comments",
     "resolve_reddit",
+    "resolve_substack",
     "resolve_wayback",
     "resolve_wikipedia",
     "resolve_youtube",
