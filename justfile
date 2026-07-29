@@ -26,6 +26,9 @@ check:
 test:
     pytest
 
-# Save a page as faithful HTML archive + clean markdown in data/
+# Corpus home: collected content, lives under /vault/media (see media/README.md)
+sites_dir := "/vault/media/sites"
+
+# Save a page as faithful HTML archive + clean markdown into the corpus
 capture url *flags:
-    uv run python -m capture -o '{{ justfile_directory() }}/data' {{ flags }} '{{ url }}'
+    uv run python -m capture -o '{{ sites_dir }}' {{ flags }} '{{ url }}'

@@ -31,9 +31,12 @@ from capture.extract import (
     slugify,
 )
 from capture.resolvers import (
+    FetchError,
     Resolution,
     arxiv_id,
+    fetch_html,
     lesswrong_post,
+    path_identity_domain,
     reddit_thread,
     resolve,
     wayback_fallback,
@@ -106,11 +109,9 @@ def capture(
     publish = resolution.publish or (
         None if resolution.dateless else published_date(resolution.source, meta_html)
     )
-    name_date = publish or resolution.fallback_date or date.today().isoformat()
-    slug = slugify(title) or page_slug(resolution.source, meta_html)
-    name = f"{domain} - {name_date} - {slug}"
-    # Folder and file names stay ASCII: transliterate, then drop the rest.
-    name = unicodedata.normalize("NFKD", name).encode("ascii", "ignore").decode()
+    name = folder_name(
+        domain, resolution.source, meta_html, title, publish, resolution.fallback_date
+    )
     folder = (destination or Path.cwd()) / name
     fresh = not folder.exists()
     folder.mkdir(parents=True, exist_ok=True)
@@ -122,6 +123,51 @@ def capture(
         if fresh:
             shutil.rmtree(folder, ignore_errors=True)
         raise
+
+
+def folder_name(
+    domain: str,
+    source: str,
+    html: str,
+    title: str,
+    publish: str | None,
+    fallback_date: str | None = None,
+) -> str:
+    """The `<domain> - <date> - <slug>` capture folder name, kept ASCII by
+    transliterating and then dropping whatever will not transliterate."""
+    name_date = publish or fallback_date or date.today().isoformat()
+    slug = slugify(title) or page_slug(source, html)
+    name = f"{domain} - {name_date} - {slug}"
+    return unicodedata.normalize("NFKD", name).encode("ascii", "ignore").decode()
+
+
+def bookmark(url: str, origin: str | None, destination: Path | None) -> Path:
+    """A lightweight capture: one plain fetch to name the folder well, then
+    just a .url internet shortcut — no browser, media, or markdown. For
+    pages worth recording in the corpus but not worth archiving in full."""
+    source = origin or url
+    domain = path_identity_domain(source) or urlparse(source).netloc.removeprefix(
+        "www."
+    )
+    try:
+        html = fetch_html(url)
+    except FetchError:
+        # A bookmark records the URL regardless; without the page the
+        # folder name falls back to the URL path and today's date.
+        html = ""
+    title = page_title(html, domain, source)
+    publish = published_date(source, html) if html else None
+    name = folder_name(domain, source, html, title, publish)
+    folder = (destination or Path.cwd()) / name
+    folder.mkdir(parents=True, exist_ok=True)
+    (folder / f"{name}.url").write_text(internet_shortcut(source))
+    return folder
+
+
+def internet_shortcut(url: str) -> str:
+    """A Windows .url shortcut. CRLF is the format's canonical line ending;
+    the [InternetShortcut] section is what makes it click-to-open."""
+    return f"[InternetShortcut]\r\nURL={url}\r\n"
 
 
 def write_capture(
@@ -367,4 +413,9 @@ def existing_capture(url: str, root: Path | None = None) -> Path | None:
             key, _, value = line.partition(": ")
             if key in ("url", "archive") and normalize(value.strip()) == target:
                 return markdown.parent
+    for shortcut in sorted(root.glob("*/*.url")):
+        # Lightweight --url bookmarks carry the URL in the shortcut itself.
+        for line in shortcut.read_text(errors="replace").splitlines():
+            if line.startswith("URL=") and normalize(line[4:].strip()) == target:
+                return shortcut.parent
     return None

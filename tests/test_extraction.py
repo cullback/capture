@@ -183,6 +183,23 @@ def test_title_strips_comma_separated_site_name():
     )
 
 
+def test_title_landing_page_keeps_site_name():
+    # airport.apunen.com: a game's root page whose <title>, og:title, and
+    # og:site_name are all identically the site name. With no URL slug to
+    # fall back on, the site name is the page's real identity.
+    html = (
+        "<title>Airport Simulator</title>"
+        '<meta property="og:title" content="Airport Simulator">'
+        '<meta property="og:site_name" content="Airport Simulator">'
+    )
+    root = "https://airport.apunen.com/"
+    assert page_title(html, "airport.apunen.com", root) == "Airport Simulator"
+    # The same site-name-only page at a path stays suppressed, so naming
+    # falls through to the URL slug rather than repeating the site name.
+    deep = "https://airport.apunen.com/blog/some-post"
+    assert page_title(html, "airport.apunen.com", deep) == ""
+
+
 def test_title_url_slug_disambiguates_wrapped_h1():
     # gameprogrammingpatterns.com: <title> is "H1 · Section · Site" and
     # the section is longer than the true title; the URL slug decides
@@ -410,6 +427,111 @@ def test_lesswrong_metadata_from_greaterwrong(monkeypatch):
     assert resolution.publish == "2008-02-12"
     assert resolution.domain == "lesswrong.com - eliezer-yudkowsky"
     assert resolution.extra["author"] == "Eliezer Yudkowsky"
+
+
+def test_greaterwrong_markdown_keeps_comments_after_main():
+    from capture.resolvers.lesswrong import greaterwrong_markdown
+
+    # Pandoc drops content after a closing </main>; GreaterWrong puts the
+    # comment thread there, so the wrapper must be demoted to survive.
+    page = (
+        '<main class="post"><div class="body-text post-body">'
+        "<p>The post body.</p></div></main>"
+        '<div id="comments"><div class="comment-body">'
+        "<p>An insightful comment.</p></div></div>"
+    )
+    markdown = greaterwrong_markdown(page)
+    assert markdown is not None
+    assert "The post body." in markdown
+    assert "An insightful comment." in markdown
+
+
+def test_greaterwrong_markdown_absolutizes_relative_urls():
+    from capture.resolvers.lesswrong import greaterwrong_markdown
+
+    # Site-relative image src must become absolute so the pipeline localizes
+    # it; protocol-relative // and already-absolute URLs are left untouched.
+    page = (
+        "<p><img src='/proxy-assets/ABC123' alt=\"chart\">"
+        '<a href="/users/someone">someone</a></p>'
+    )
+    markdown = greaterwrong_markdown(page)
+    assert markdown is not None
+    assert "https://www.greaterwrong.com/proxy-assets/ABC123" in markdown
+    assert "https://www.greaterwrong.com/users/someone" in markdown
+
+
+def test_hackernews_item_url_forms():
+    from capture.resolvers import hackernews_item
+
+    assert (
+        hackernews_item("https://news.ycombinator.com/item?id=40765183") == "40765183"
+    )
+    assert (
+        hackernews_item("https://news.ycombinator.com/item?id=123&p=2#40000") == "123"
+    )
+    assert hackernews_item("https://news.ycombinator.com/newest") is None
+    assert hackernews_item("https://example.com/item?id=5") is None
+
+
+def test_hackernews_markdown_threads_comments():
+    from capture.resolvers.hackernews import hackernews_markdown
+
+    story = {
+        "id": 1,
+        "type": "story",
+        "title": "A neat post",
+        "url": "https://example.com/post",
+        "author": "alice",
+        "points": 42,
+        "created_at_i": 1719100800,  # 2024-06-23
+        "text": None,
+        "children": [
+            {
+                "id": 2,
+                "type": "comment",
+                "author": "bob",
+                "created_at_i": 1719104400,
+                # HN bodies are escaped HTML: entities and <p>/<a> markup.
+                "text": 'See <a href="https:&#x2F;&#x2F;x.test&#x2F;a" rel="nofollow">'
+                "the link</a>.<p>Second para with 2 &gt; 1.",
+                "children": [
+                    {
+                        "id": 3,
+                        "type": "comment",
+                        "author": "carol",
+                        "created_at_i": 1719108000,
+                        "text": "A reply.",
+                        "children": [],
+                    }
+                ],
+            },
+            # Deleted comments carry null text but keep their place.
+            {
+                "id": 4,
+                "type": "comment",
+                "author": None,
+                "created_at_i": 1719108000,
+                "text": None,
+                "children": [],
+            },
+        ],
+    }
+    markdown = hackernews_markdown(story)
+    assert "# A neat post" in markdown
+    assert "Discussion of <https://example.com/post>" in markdown
+    assert "Submitted by alice on 2024-06-23 — 42 points" in markdown
+    assert "## Comments (3)" in markdown
+    # Top-level comment: one blockquote level, links and entities resolved.
+    assert "> **bob** (2024-06-23)" in markdown
+    assert "> See [the link](https://x.test/a)." in markdown
+    assert "> Second para with 2 > 1." in markdown
+    # Nested reply sits one level deeper.
+    assert "> > **carol** (2024-06-23)" in markdown
+    assert "> > A reply." in markdown
+    # Deleted comment still rendered.
+    assert "> **[deleted]**" in markdown
+    assert "*[deleted]*" in markdown
 
 
 def test_lesswrong_wiki_urls():

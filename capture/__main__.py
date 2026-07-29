@@ -5,7 +5,7 @@ import shutil
 import sys
 from pathlib import Path
 
-from capture.pipeline import capture, existing_capture
+from capture.pipeline import bookmark, capture, existing_capture
 
 
 def main() -> None:
@@ -37,6 +37,13 @@ def main() -> None:
         help="original URL for provenance and dedup when ingesting a local file",
     )
     parser.add_argument(
+        "--url",
+        dest="bookmark",
+        action="store_true",
+        help="bookmark only: fetch just enough to name the folder, then save"
+        " a .url shortcut instead of archiving the page",
+    )
+    parser.add_argument(
         "-o",
         "--output",
         type=Path,
@@ -57,7 +64,9 @@ def main() -> None:
         print("pass -f / --force to re-capture")
         return
     try:
-        if folder := corpus_copy(lookup, destination, args.corpus, args.force) or (
+        if args.bookmark:
+            print(display_path(bookmark(args.url, args.origin, destination)))
+        elif folder := corpus_copy(lookup, destination, args.corpus, args.force) or (
             capture(args.url, args.origin, destination)
         ):
             print(display_path(folder))

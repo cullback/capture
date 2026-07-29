@@ -8,13 +8,18 @@ pipeline.
 """
 
 from capture.resolvers.arxiv import arxiv_id, arxiv_published, resolve_arxiv
-from capture.resolvers.base import Resolution, fetch_html
+from capture.resolvers.base import FetchError, Resolution, fetch_html
 from capture.resolvers.default import (
     original_url,
     path_identity_domain,
     resolve_default,
 )
 from capture.resolvers.github import github_markdown, resolve_github
+from capture.resolvers.hackernews import (
+    hackernews_item,
+    hackernews_markdown,
+    resolve_hackernews,
+)
 from capture.resolvers.reddit import (
     reddit_comments,
     reddit_markdown,
@@ -35,6 +40,7 @@ RESOLVERS = [
     resolve_arxiv,
     resolve_github,
     resolve_youtube,
+    resolve_hackernews,
     resolve_reddit,
     resolve_wayback,
     resolve_lesswrong,
@@ -52,11 +58,14 @@ def resolve(url: str) -> Resolution:
 
 __all__ = [
     "RESOLVERS",
+    "FetchError",
     "Resolution",
     "arxiv_id",
     "arxiv_published",
     "fetch_html",
     "github_markdown",
+    "hackernews_item",
+    "hackernews_markdown",
     "original_url",
     "path_identity_domain",
     "reddit_comments",
@@ -67,6 +76,7 @@ __all__ = [
     "resolve_default",
     "lesswrong_post",
     "resolve_github",
+    "resolve_hackernews",
     "resolve_lesswrong",
     "resolve_pdf",
     "resolve_reddit",

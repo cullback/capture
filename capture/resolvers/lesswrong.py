@@ -6,11 +6,17 @@ as clean static HTML with the true post date and comments included.
 """
 
 import re
+import subprocess
 from datetime import datetime, timezone
+from pathlib import Path
 
 from capture.extract import page_title
 from capture.resolvers import base
 from capture.resolvers.base import Resolution
+
+# Kept in step with pipeline.PANDOC_FORMAT; duplicated rather than imported
+# because pipeline imports this package (importing back would be circular).
+PANDOC_FORMAT = "html+tex_math_dollars+tex_math_single_backslash"
 
 
 def resolve_lesswrong(url: str) -> Resolution | None:
@@ -46,8 +52,49 @@ def resolve_lesswrong(url: str) -> Resolution | None:
         domain=f"lesswrong.com - {author_slug(author)}" if author else None,
         html=html,
         publish=publish,
+        markdown=greaterwrong_markdown(html),
         extra={"author": author},
     )
+
+
+def greaterwrong_markdown(html: str) -> str | None:
+    """Convert a GreaterWrong post page to markdown with the comment thread
+    intact, or None to let the pipeline fall back to its own conversion.
+
+    Two GreaterWrong quirks make the default URL conversion lose comments:
+    pandoc's HTML reader discards everything after a closing </main>, and
+    GreaterWrong renders the comment thread there, so <main> is demoted to
+    a plain <div>. Image and link targets are site-relative
+    (/proxy-assets/..., /users/...); make them absolute so the pipeline can
+    localize images and the links stay live outside the site.
+    """
+    html = re.sub(r"<main\b[^>]*>", "<div>", html).replace("</main>", "</div>")
+    html = re.sub(
+        r"(\b(?:href|src)=)(['\"])(/(?!/)[^'\"]*)\2",
+        lambda m: f'{m.group(1)}"https://www.greaterwrong.com{m.group(3)}"',
+        html,
+    )
+    filter_path = Path(__file__).resolve().parent.parent / "filters" / "clean.lua"
+    try:
+        result = subprocess.run(
+            [
+                "pandoc",
+                "-f",
+                PANDOC_FORMAT,
+                "-t",
+                "gfm-raw_html",
+                "--wrap=none",
+                f"--lua-filter={filter_path}",
+                "-o",
+                "-",
+            ],
+            input=html.encode(),
+            stdout=subprocess.PIPE,
+            check=True,
+        )
+    except (OSError, subprocess.CalledProcessError):
+        return None
+    return result.stdout.decode()
 
 
 def lesswrong_post(url: str) -> tuple[str, str] | None:

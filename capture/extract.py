@@ -192,7 +192,13 @@ def page_title(html: str, domain: str = "", url: str = "") -> str:
     if not scores:
         return ""
     best = max(scores, key=lambda t: (scores[t], len(t)))
-    return best if scores[best] > 0 else ""
+    if scores[best] > 0:
+        return best
+    # Every candidate was penalised as the site name. On a landing page
+    # (no URL slug to fall back on) that name is the page's real identity,
+    # so keep it rather than collapsing to "untitled"; article pages have
+    # a slug and stay suppressed, falling through to it.
+    return best if not segment else ""
 
 
 def compact(text: str) -> str:
