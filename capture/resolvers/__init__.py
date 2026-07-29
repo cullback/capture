@@ -14,7 +14,7 @@ from capture.resolvers.default import (
     path_identity_domain,
     resolve_default,
 )
-from capture.resolvers.github import github_markdown, resolve_github
+from capture.resolvers.github import github_markdown, github_wiki, resolve_github
 from capture.resolvers.hackernews import (
     hackernews_item,
     hackernews_markdown,
@@ -64,6 +64,7 @@ __all__ = [
     "arxiv_published",
     "fetch_html",
     "github_markdown",
+    "github_wiki",
     "hackernews_item",
     "hackernews_markdown",
     "original_url",

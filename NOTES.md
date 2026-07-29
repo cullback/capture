@@ -111,6 +111,36 @@ relative images rebased onto raw.githubusercontent.com. Gists go
 through the gist API, which also supplies created_at. The browser
 still archives the rendered page as the .html artifact.
 
+## GitHub wikis: the same trick, minus the HTML
+
+A wiki is a git repo (`<repo>.wiki.git`) whose pages are the source
+markdown, so the blob treatment applies — but the rendered page is
+worth nothing here, and the naive capture showed why. Converting
+stickfigure/blog's REST API page back from HTML gave 721 lines against
+the source's 423: repo nav and wiki sidebar at both ends, nine "Uh oh!
+There was an error while loading" blocks from sidebar entries that
+never finished lazy-loading, `\#` escapes through every `Rule #N`
+heading, an empty `[](#anchor)` stub under each, and `` ```notranslate ``
+fences. So `use_browser=False` and no .html artifact.
+
+Two things the blob path could not supply:
+
+1. **Title.** `markdown_heading` would have titled every post on that
+   wiki "Oct 30, 2023" — the date is its h1. GitHub has no title but
+   the page name, which it stores with spaces as dashes and renders
+   back, so the title is the unescaped slug with dashes to spaces.
+2. **Date.** The commits API doesn't serve wikis, so the date comes
+   from cloning the wiki repo (bare and blobless — this needs commits
+   and trees, not content). It must be a full clone: `--depth` would
+   date the page to wherever the cutoff happened to land. Worth it —
+   the HTML capture had dated the page 2023-11-21, reading back one of
+   its own "Update 2023-11-21" bullets, where the first commit says
+   2023-10-30, matching the h1 the author wrote.
+
+A bare `/wiki` resolves to `Home`, following GitHub's own redirect.
+`?` in a page name ("What-Is-Similarity?") has to be percent-encoded
+for the raw host or it starts a query string.
+
 ## Code blocks and formatting
 
 - Pandoc writes code fences only when the block carries a language;

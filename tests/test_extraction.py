@@ -333,6 +333,70 @@ def test_github_blob_markdown(monkeypatch):
     assert module.github_markdown("https://github.com/o/r/issues/5") is None
 
 
+def test_github_wiki_page(monkeypatch):
+    import capture.resolvers.base as base
+    import capture.resolvers.github as github
+
+    fetched = []
+
+    def fake_fetch(url: str) -> str:
+        fetched.append(url)
+        # stickfigure/blog: the h1 is the post DATE, not the title
+        return "# Oct 30, 2023\n\nbody\n\n![d](assets/img.png)"
+
+    monkeypatch.setattr(base, "fetch_html", fake_fetch)
+    monkeypatch.setattr(github, "wiki_first_commit", lambda o, r, f: "2023-10-30")
+
+    wiki = github.github_wiki(
+        "https://github.com/stickfigure/blog/wiki/How-to-%28and-how-not-to%29-design-REST-APIs"
+    )
+    assert wiki is not None
+    # Percent-escapes survive the round trip to the raw wiki host
+    assert fetched == [
+        "https://raw.githubusercontent.com/wiki/stickfigure/blog/"
+        "How-to-%28and-how-not-to%29-design-REST-APIs.md"
+    ]
+    # The page name is the title; the first heading would give "Oct 30, 2023"
+    assert wiki["title"] == "How to (and how not to) design REST APIs"
+    assert wiki["publish"] == "2023-10-30"
+    assert wiki["domain"] == "github.com - stickfigure"
+    # Wiki uploads live at the wiki repo root, beside the page
+    assert (
+        "https://raw.githubusercontent.com/wiki/stickfigure/blog/assets/img.png"
+        in wiki["markdown"]
+    )
+
+
+def test_github_wiki_url_forms(monkeypatch):
+    import capture.resolvers.base as base
+    import capture.resolvers.github as github
+
+    monkeypatch.setattr(base, "fetch_html", lambda u: u)
+    monkeypatch.setattr(github, "wiki_first_commit", lambda o, r, f: None)
+
+    # A bare /wiki is the Home page, as GitHub's own redirect has it
+    for url in ["https://github.com/o/r/wiki", "https://github.com/o/r/wiki/"]:
+        home = github.github_wiki(url)
+        assert home is not None and home["title"] == "Home"
+    # `?` in a page name must not become a query string
+    wiki = github.github_wiki("https://github.com/o/r/wiki/What-Is-Similarity%3F")
+    assert wiki is not None
+    assert wiki["markdown"].endswith("What-Is-Similarity%3F.md")
+    # GitHub's own wiki UI routes are not pages
+    assert github.github_wiki("https://github.com/o/r/wiki/_history") is None
+    # Non-wiki GitHub URLs stay with their own resolvers
+    assert github.github_wiki("https://github.com/o/r") is None
+    assert github.github_wiki("https://github.com/o/r/blob/main/x.md") is None
+
+
+def test_github_repo_ignores_wiki_urls():
+    from capture.resolvers.github import github_repo
+
+    # The wiki resolver runs first, but a wiki URL is not a repo capture
+    assert github_repo("https://github.com/o/r/wiki") is None
+    assert github_repo("https://github.com/o/r/wiki/Some-Page") is None
+
+
 def test_reddit_thread_url_forms():
     from capture.resolvers import reddit_thread
 

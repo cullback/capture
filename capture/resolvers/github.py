@@ -1,11 +1,11 @@
-"""GitHub blob, gist, and repository URLs."""
+"""GitHub blob, gist, wiki, and repository URLs."""
 
 import json
 import re
 import subprocess
 import tempfile
 from pathlib import Path
-from urllib.parse import urljoin
+from urllib.parse import quote, unquote, urljoin
 
 from capture.resolvers import base
 from capture.resolvers.base import Resolution
@@ -14,6 +14,8 @@ from capture.resolvers.base import Resolution
 def resolve_github(url: str) -> Resolution | None:
     """The markdown body comes straight from the raw file; the browser
     still archives the rendered page."""
+    if wiki := github_wiki(url):
+        return resolve_wiki(url, wiki)
     if repo := github_repo(url):
         return resolve_repo(*repo)
     gh = github_markdown(url)
@@ -174,3 +176,83 @@ def github_markdown(url: str) -> dict | None:
                     "domain": f"gist.github.com - {user}",
                 }
     return None
+
+
+# Reserved wiki routes: pages of GitHub's own UI, not content.
+WIKI_ROUTES = ("_new", "_edit", "_history", "_pages", "_compare", "_access")
+
+
+def github_wiki(url: str) -> dict | None:
+    """Raw markdown and metadata for a GitHub wiki page.
+
+    A wiki IS a git repo (`<repo>.wiki.git`) whose pages are the source
+    markdown; the rendered page only wraps that in repo chrome, so there
+    is nothing in the HTML worth keeping.
+    """
+    match = re.search(
+        r"github\.com/([^/?#]+)/([^/?#]+?)(?:\.wiki)?/wiki(?:/([^/?#]+))?/?(?:[?#].*)?$",
+        url,
+    )
+    if not match:
+        return None
+    owner, repo, page = match.group(1), match.group(2), unquote(match.group(3) or "")
+    # A bare /wiki serves the Home page, same as GitHub's own redirect.
+    page = page or "Home"
+    if page in WIKI_ROUTES:
+        return None
+    # `?` in a page name ("What-Is-Similarity?") would start a query string.
+    raw_url = f"https://raw.githubusercontent.com/wiki/{owner}/{repo}/{quote(page)}.md"
+    text = base.fetch_html(raw_url)
+    # Rebase relative links (wiki uploads live at the wiki repo root).
+    text = re.sub(
+        r"(!\[[^\]]*\]\()(?!https?://|#|data:)([^)\s]+)",
+        lambda m: m.group(1) + urljoin(raw_url, m.group(2)),
+        text,
+    )
+    return {
+        "markdown": text,
+        "publish": wiki_first_commit(owner, repo, f"{page}.md"),
+        # The file name is the only title a wiki page has: GitHub stores
+        # spaces as dashes and renders them back. Taking the document's
+        # first heading instead would title stickfigure/blog's posts
+        # "Oct 30, 2023" — the date is its h1.
+        "title": page.replace("-", " "),
+        "domain": f"github.com - {owner}",
+    }
+
+
+def wiki_first_commit(owner: str, repo: str, filename: str) -> str | None:
+    """When the page first appeared. The commits API doesn't serve wikis,
+    so read the history from the wiki repo itself — in full, since a
+    shallow clone would date the page to wherever the cutoff landed."""
+    source = f"https://github.com/{owner}/{repo}.wiki.git"
+    with tempfile.TemporaryDirectory() as tmp:
+        clone = subprocess.run(
+            # Bare and blobless: this needs commits and trees, not content.
+            ["git", "clone", "--quiet", "--bare", "--filter=blob:none", source, tmp],
+            capture_output=True,
+            text=True,
+        )
+        if clone.returncode != 0:
+            print(f"wiki history unavailable: {clone.stderr.strip()[:200]}")
+            return None
+        log = subprocess.run(
+            ["git", "-C", tmp, "log", "--format=%ad", "--date=short", "--", filename],
+            capture_output=True,
+            text=True,
+        )
+    dates = log.stdout.split()
+    # The page's visible date is the LAST commit, a modified date.
+    return dates[-1] if dates else None
+
+
+def resolve_wiki(url: str, wiki: dict) -> Resolution:
+    return Resolution(
+        source=url,
+        content=url,
+        domain=wiki["domain"],
+        use_browser=False,
+        publish=wiki["publish"],
+        markdown=wiki["markdown"],
+        title=wiki["title"],
+    )
