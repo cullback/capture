@@ -53,8 +53,22 @@ publish_date: 2026-02-25
 
 `publish_date` gets omitted when unknown, recording that honestly. Other keys
 appear when a source supplies them: `author`, `archive` for snapshot captures,
-`hackernews` when the Algolia API finds a submission of the URL, and
-source-specific extras such as `subreddit`, `score`, `stars`.
+and source-specific extras such as `subreddit`, `score`, `stars`.
+
+`discussions` lists threads about the page, richest first:
+
+```yaml
+discussions:
+  - https://www.reddit.com/r/MachineLearning/comments/6gwqiw/
+  - https://news.ycombinator.com/item?id=34649113
+```
+
+Hacker News and Reddit are searched by URL, lobsters by title. Only threads
+with more than five comments are kept, one per subreddit, and general-interest
+subreddits are excluded — r/todayilearned reposts a good link for a decade and
+discusses the headline rather than the piece. An empty `discussions: []` says
+the sources were searched and found nothing, which absence could not
+distinguish from never having looked.
 
 ## Sources
 

@@ -222,14 +222,180 @@ def test_slug_affinity_survives_truncated_slugs():
     assert not slug_affinity("Turtle Math", "c2532359h2760821-the-emoji-problem-part-i")
 
 
-def test_best_hn_submission_prefers_discussion():
-    from capture.pipeline import best_submission
+def test_hackernews_threads_keeps_every_discussed_submission(monkeypatch):
+    # arxiv.org/abs/1706.03762 has 16 HN submissions; the old "one best
+    # submission" rule kept exactly one however many were discussed.
+    import capture.discussions as disc
 
-    drive_by = {"objectID": "1", "points": 50, "num_comments": 3}
-    debated = {"objectID": "2", "points": 30, "num_comments": 400}
-    assert best_submission([drive_by, debated]) == debated
-    tied = {"objectID": "3", "points": 80, "num_comments": 3}
-    assert best_submission([drive_by, tied]) == tied
+    url = "https://arxiv.org/abs/1706.03762"
+    monkeypatch.setattr(
+        disc,
+        "_get_json",
+        lambda api: {
+            "hits": [
+                {"objectID": "34649113", "url": url, "num_comments": 55},
+                {"objectID": "20000000", "url": url, "num_comments": 9},
+                {"objectID": "14542830", "url": url, "num_comments": 3},
+                {"objectID": "14553119", "url": url, "num_comments": 0},
+                {"objectID": "99999999", "url": "https://elsewhere.example/"},
+            ]
+        },
+    )
+    # Both discussed submissions survive; the 3-comment drive-by, the
+    # silent repost, and the hit for another URL do not.
+    assert disc.hackernews_threads(url) == [
+        ("https://news.ycombinator.com/item?id=34649113", 55),
+        ("https://news.ycombinator.com/item?id=20000000", 9),
+    ]
+
+
+def test_reddit_threads_drop_hn_mirror_bots(monkeypatch):
+    # The same paper on reddit: r/MachineLearning is the discussion.
+    # r/hackernews and friends mirror the HN front page, so they are
+    # dropped even when a mirror draws a crowd; u_* is a profile page.
+    import capture.discussions as disc
+
+    def post(subreddit, comments, thread="abc123"):
+        return {
+            "subreddit": subreddit,
+            "num_comments": comments,
+            "permalink": f"/r/{subreddit}/comments/{thread}/t/",
+        }
+
+    monkeypatch.setattr(
+        disc,
+        "_get_json",
+        lambda api: {
+            "data": [
+                post("MachineLearning", 58),
+                post("hackernews", 40),
+                post("patient_hackernews", 1),
+                post("h_n", 1),
+                post("u_MrDCP2", 30),
+                post("todayilearned", 400),
+                post("compsci", 5, "quiet"),
+                post("compsci", 7, "busy"),
+            ]
+        },
+    )
+    # Five comments is still drive-by; six is the bar. r/todayilearned
+    # is dropped however busy it gets: it discusses the headline fact,
+    # not the piece.
+    assert disc.reddit_threads("https://arxiv.org/abs/1706.03762") == [
+        ("https://www.reddit.com/r/MachineLearning/comments/abc123/t/", 58),
+        ("https://www.reddit.com/r/compsci/comments/busy/t/", 7),
+    ]
+
+
+def test_reddit_threads_keep_one_per_subreddit(monkeypatch):
+    # en.wikipedia.org/wiki/Low-background_steel drew 25 r/todayilearned
+    # threads over a decade — the same fact reposted, not 25 discussions.
+    # Whatever the subreddit, the busiest thread stands for it.
+    import capture.discussions as disc
+
+    monkeypatch.setattr(
+        disc,
+        "_get_json",
+        lambda api: {
+            "data": [
+                {
+                    "subreddit": "rust",
+                    "num_comments": n,
+                    "permalink": f"/r/rust/comments/{n}/t/",
+                }
+                for n in (9, 41, 12)
+            ]
+        },
+    )
+    assert disc.reddit_threads("https://example.com/x") == [
+        ("https://www.reddit.com/r/rust/comments/41/t/", 41)
+    ]
+
+
+def test_lobsters_threads_match_url_not_just_title(monkeypatch):
+    # Lobsters is searched by title because it has no URL lookup, so
+    # the story's own u-url has to confirm the hit.
+    import capture.discussions as disc
+
+    def block(short_id, url, comments):
+        return (
+            f'<li id="story_{short_id}" data-shortid="{short_id}">'
+            f'<a class="u-url" href="{url}">t</a>'
+            f'<a href="/s/{short_id}/slug" class="mobile_comments">'
+            f"<span>{comments}</span></a>"
+        )
+
+    wanted = "https://danluu.com/everything-is-broken/"
+    monkeypatch.setattr(
+        disc,
+        "_get_html",
+        lambda page: "<ol>"
+        + block("aaaaaa", "https://elsewhere.example/same-title", 90)
+        + block("bbbbbb", wanted, 31)
+        + block("cccccc", wanted, 2)
+        + "</ol>",
+    )
+    # Only the URL match above the comment bar survives: not the
+    # same-titled story elsewhere, not the two-comment one.
+    assert disc.lobsters_threads(wanted, "Everything is broken") == [
+        ("https://lobste.rs/s/bbbbbb", 31)
+    ]
+    # No title, no search: lobsters has nothing else to go on.
+    assert disc.lobsters_threads(wanted, "") == []
+
+
+def test_discussions_sorts_across_sources_and_drops_self(monkeypatch):
+    import capture.discussions as disc
+
+    hn = "https://news.ycombinator.com/item?id=1"
+    monkeypatch.setattr(disc, "hackernews_threads", lambda u: [(hn, 20)])
+    monkeypatch.setattr(
+        disc,
+        "reddit_threads",
+        lambda u: [("https://www.reddit.com/r/a/comments/b/c/", 90)],
+    )
+    # Reddit's 90 outranks HN's 20: the list is ordered by discussion,
+    # not by source.
+    assert disc.discussions("https://example.com/post") == [
+        "https://www.reddit.com/r/a/comments/b/c/",
+        hn,
+    ]
+    # Capturing the HN thread itself must not list it as its own
+    # discussion.
+    assert disc.discussions(hn) == ["https://www.reddit.com/r/a/comments/b/c/"]
+
+
+def test_discussions_survive_a_dead_source(monkeypatch):
+    import capture.discussions as disc
+
+    def die(url, retry=True):
+        raise disc.FetchError(403, url)
+
+    # The real failure path: Arctic Shift answers automated clients 403.
+    monkeypatch.setattr(disc, "fetch_html", die)
+    # A source that fails contributes nothing rather than failing the
+    # capture built around it.
+    assert disc.discussions("https://example.com/post") == []
+
+
+def test_discussions_survive_a_junk_response(monkeypatch):
+    import capture.discussions as disc
+
+    # Well-formed JSON that is not the shape either API documents:
+    # missing keys must not raise past the lookup.
+    monkeypatch.setattr(disc, "_get_json", lambda api: {"hits": [{}], "data": [{}]})
+    assert disc.discussions("https://example.com/post") == []
+
+
+def test_discussion_lines_empty_list_is_explicit():
+    from capture.pipeline import discussion_lines
+
+    assert discussion_lines([]) == ["discussions: []"]
+    assert discussion_lines(["https://a.example/1", "https://b.example/2"]) == [
+        "discussions:",
+        "  - https://a.example/1",
+        "  - https://b.example/2",
+    ]
 
 
 def test_youtube_id_from_url_forms():

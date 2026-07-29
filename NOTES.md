@@ -141,6 +141,45 @@ A bare `/wiki` resolves to `Home`, following GitHub's own redirect.
 `?` in a page name ("What-Is-Similarity?") has to be percent-encoded
 for the raw host or it starts a query string.
 
+## Discussions: three sources, three different obstacles
+
+`discussions` replaced the single `hackernews` key. Each source refused
+a different part of the obvious approach.
+
+**Arctic Shift 403s urllib.** The first version used
+`urllib.request` and caught `OSError`, so every reddit lookup silently
+returned nothing — a corpus-wide backfill would have written 524
+files with no reddit results and no error. It is the same
+client-fingerprint block that put `fetch_html` on curl for AoPS, and
+the fix is the same. The lesson generalised: a failed lookup now
+prints, because a source that quietly returns nothing is
+indistinguishable from a page nobody discussed.
+
+**Reddit needed a quality bar, and size is not it.** With only "more
+than five comments", the Low-background steel capture drew 29 threads,
+25 of them r/todayilearned reposting the same fact across a decade;
+r/todayilearned alone supplied 91 of the corpus's first 308 reddit
+threads. Two rules fixed it: one thread per subreddit (the busiest),
+and a denylist of general-interest subreddits. Note what the denylist
+is NOT: a subscriber threshold would have cut r/programming, the
+corpus's best technical source at 6.7M subscribers, while sparing
+nothing that matters — r/futurology has 21M. Topical beats small. The
+corpus went from 500 threads to 387, and from 308 reddit threads to
+195 across 93 subreddits.
+
+**Lobsters has no URL lookup at all.** `/domains/<domain>.json` serves
+the newest 25 and ignores `?page=` (every page returns page 1, in both
+JSON and HTML); the search index does not cover URLs, and cannot find
+a story by its own link; `/stories/check_url_dupe` needs a session.
+Searching the _title_ does work, so lobsters is searched by title and
+the story's `u-url` confirms the match — lossy but never wrong.
+Measured recall is about two thirds, the misses being titles built
+from words shorter than the four characters the index keeps ("The mean
+means nothing"). It is deliberately left out of the backfill: lobsters
+starts answering 429 after a few dozen searches, and sweeping a small
+volunteer-run site 524 times is not a reasonable thing to do to it.
+New captures pick it up one query at a time.
+
 ## Code blocks and formatting
 
 - Pandoc writes code fences only when the block carries a language;
