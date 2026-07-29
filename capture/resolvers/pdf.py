@@ -4,6 +4,7 @@ Metadata comes from pdfinfo; markdown comes from the dotfiles pdf2md
 script (Datalab Marker API), a hard dependency.
 """
 
+import os
 import re
 import shutil
 import subprocess
@@ -120,6 +121,18 @@ def pdf_info(pdf: Path) -> dict:
     return info
 
 
+def child_env() -> dict[str, str]:
+    """`sys.executable -m capture.pdf2md` needs to find the package it
+    came from. The nix wrapper exports PATH but not PYTHONPATH, so the
+    bare store interpreter cannot import `capture` and every PDF
+    capture failed in an installed build while working from a checkout,
+    where the cwd supplied it. Name the package root explicitly."""
+    env = dict(os.environ)
+    root = str(Path(__file__).resolve().parents[2])
+    env["PYTHONPATH"] = os.pathsep.join(filter(None, [root, env.get("PYTHONPATH", "")]))
+    return env
+
+
 def pdf_markdown(pdf: Path) -> tuple[str, Path | None]:
     """Layout-aware conversion via the packaged pdf2md module (Datalab
     Marker API). A hard dependency: raises when conversion fails."""
@@ -137,6 +150,7 @@ def pdf_markdown(pdf: Path) -> tuple[str, Path | None]:
         ],
         capture_output=True,
         text=True,
+        env=child_env(),
     )
     produced = out / f"{pdf.stem}.md"
     if result.returncode != 0 or not produced.exists():
