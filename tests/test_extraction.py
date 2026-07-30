@@ -397,14 +397,26 @@ def test_frontmatter_records_a_degraded_artifact():
     # A plain fetch is recorded, so a bare document is never mistaken for
     # an archive that renders offline.
     assert "artifact: fetch" in frontmatter(page, "T", "2024-01-01", degraded=True)
-    # Captures whose artifact is not HTML at all (a paper's PDF) say
-    # nothing either way.
-    paper = Resolution(
-        source="https://arxiv.org/abs/1",
-        content="https://arxiv.org/abs/1",
-        save_html=False,
+
+
+def test_no_artifact_key_when_there_is_no_html(tmp_path):
+    # A repo capture is a .bundle plus markdown and never runs the
+    # browser, so it has no browser archive to have fallen short of.
+    # write_capture is what knows whether an .html was written at all.
+    from capture.pipeline import write_capture
+    from capture.resolvers import Resolution
+
+    repo = Resolution(
+        source="https://github.com/o/r",
+        content="https://github.com/o/r",
+        use_browser=False,
+        markdown="# r\n\nA readme.\n",
     )
-    assert "artifact:" not in frontmatter(paper, "T", "2024-01-01", degraded=True)
+    folder = tmp_path / "cap"
+    folder.mkdir()
+    write_capture(repo, folder, "cap", "", "r", "2024-01-01", degraded=True)
+    assert "artifact:" not in (folder / "cap.md").read_text()
+    assert not (folder / "cap.html").exists()
 
 
 def test_discussion_lines_empty_list_is_explicit():

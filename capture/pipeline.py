@@ -202,8 +202,12 @@ def write_capture(
     publish: str | None,
     degraded: bool = False,
 ) -> Path:
-    if artifact_html and resolution.save_html:
+    wrote_html = bool(artifact_html) and resolution.save_html
+    if wrote_html:
         (folder / f"{name}.html").write_text(artifact_html)
+    # Only an .html we actually wrote can be a plain fetch. A repo's
+    # bundle or a paper's PDF has no browser archive to fall short of.
+    degraded = degraded and wrote_html
 
     if resolution.download_media:
         resolution.download_media(folder, name)
@@ -281,7 +285,7 @@ def frontmatter(
             lines.append(f"{key}: {json.dumps(value, ensure_ascii=False)}")
     if resolution.archive:
         lines.append(f"archive: {resolution.archive}")
-    if degraded and resolution.save_html:
+    if degraded:
         # Said out loud, because it is the difference between an archive
         # that renders offline and a bare document whose styles and
         # images live on a server that may not outlast the capture.
