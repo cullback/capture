@@ -387,6 +387,26 @@ def test_discussions_survive_a_junk_response(monkeypatch):
     assert disc.discussions("https://example.com/post") == []
 
 
+def test_frontmatter_records_a_degraded_artifact():
+    from capture.pipeline import frontmatter
+    from capture.resolvers import Resolution
+
+    page = Resolution(source="https://example.com/x", content="https://example.com/x")
+    # The normal case says nothing: absence means a browser archive.
+    assert "artifact:" not in frontmatter(page, "T", "2024-01-01", degraded=False)
+    # A plain fetch is recorded, so a bare document is never mistaken for
+    # an archive that renders offline.
+    assert "artifact: fetch" in frontmatter(page, "T", "2024-01-01", degraded=True)
+    # Captures whose artifact is not HTML at all (a paper's PDF) say
+    # nothing either way.
+    paper = Resolution(
+        source="https://arxiv.org/abs/1",
+        content="https://arxiv.org/abs/1",
+        save_html=False,
+    )
+    assert "artifact:" not in frontmatter(paper, "T", "2024-01-01", degraded=True)
+
+
 def test_discussion_lines_empty_list_is_explicit():
     from capture.pipeline import discussion_lines
 

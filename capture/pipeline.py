@@ -74,11 +74,16 @@ def capture(
     # (jaykmody.com) while serving plain fetches fine: degrade to the
     # raw HTML as artifact.
     artifact_html = resolution.html
+    # Whether the .html is a plain fetch rather than a browser archive:
+    # true for archive.today, which the resolvers deliberately curl, and
+    # for every path below that falls back to the raw document.
+    degraded = True
     if resolution.use_browser and resolution.save_html:
         with tempfile.TemporaryDirectory() as tmp:
             candidate = Path(tmp) / "capture.html"
             if single_file(resolution.content, candidate) and candidate.exists():
                 artifact_html = candidate.read_text()
+                degraded = False
             else:
                 print("browser capture failed; archiving the plain fetch instead")
     if (
@@ -89,20 +94,26 @@ def capture(
         raise RuntimeError(f"every fetcher failed for {url}")
     if resolution.markdown is None and challenge_page(artifact_html):
         # Bot checks served with HTTP 200 (steamdb) dodge the status
-        # check; nothing real was fetched.
-        if resolution.html and not challenge_page(resolution.html):
-            # Only the browser was challenged: randomascii.wordpress.com
-            # hands curl the whole article and chromium an interstitial.
-            # Keep the copy we can actually read.
-            print("browser got a bot check; archiving the plain fetch instead")
-            artifact_html = resolution.html
-        elif snapshot := wayback_fallback(url):
-            # The Wayback Machine may hold a real copy from a luckier
-            # crawl (dl.acm.org PDFs): recapture through the newest
-            # snapshot, which keeps the original URL's identity for
-            # naming, frontmatter, and dedup.
+        # check; nothing real was fetched. The Wayback Machine may hold
+        # a real copy from a luckier crawl (dl.acm.org PDFs): recapture
+        # through the newest snapshot, which keeps the original URL's
+        # identity for naming, frontmatter, and dedup.
+        #
+        # Wayback comes first even when the plain fetch looks fine,
+        # because capturing a snapshot runs the browser over it and
+        # yields an archive that renders offline, where the plain fetch
+        # is a bare document whose styles and images live elsewhere.
+        if snapshot := wayback_fallback(url):
             print(f"bot check defeated the archive; capturing {snapshot}")
             return capture(snapshot, destination=destination)
+        if resolution.html and not challenge_page(resolution.html):
+            # Last resort: only the browser was challenged.
+            # randomascii.wordpress.com hands curl the whole article and
+            # chromium an interstitial, and a document we can read beats
+            # no capture — recorded as `artifact: fetch`.
+            print("browser got a bot check; archiving the plain fetch instead")
+            artifact_html = resolution.html
+            degraded = True
         else:
             raise RuntimeError(f"bot-check interstitial instead of content for {url}")
 
@@ -124,7 +135,9 @@ def capture(
     fresh = not folder.exists()
     folder.mkdir(parents=True, exist_ok=True)
     try:
-        return write_capture(resolution, folder, name, artifact_html, title, publish)
+        return write_capture(
+            resolution, folder, name, artifact_html, title, publish, degraded
+        )
     except BaseException:
         # A failed capture leaves nothing behind — but never delete a
         # pre-existing folder during a --force re-capture.
@@ -185,6 +198,7 @@ def write_capture(
     artifact_html: str,
     title: str,
     publish: str | None,
+    degraded: bool = False,
 ) -> Path:
     if artifact_html and resolution.save_html:
         (folder / f"{name}.html").write_text(artifact_html)
@@ -242,12 +256,14 @@ def write_capture(
         # Content the page withholds from its own HTML — substack serves
         # two comments and lazy-loads the rest.
         body = body.rstrip("\n") + "\n" + resolution.markdown_suffix
-    markdown.write_text(frontmatter(resolution, title, publish) + body)
+    markdown.write_text(frontmatter(resolution, title, publish, degraded) + body)
     format_markdown(markdown)
     return folder
 
 
-def frontmatter(resolution: Resolution, title: str, publish: str | None) -> str:
+def frontmatter(
+    resolution: Resolution, title: str, publish: str | None, degraded: bool = False
+) -> str:
     domain = urlparse(resolution.source).netloc.removeprefix("www.")
     lines = [
         "---",
@@ -263,6 +279,12 @@ def frontmatter(resolution: Resolution, title: str, publish: str | None) -> str:
             lines.append(f"{key}: {json.dumps(value, ensure_ascii=False)}")
     if resolution.archive:
         lines.append(f"archive: {resolution.archive}")
+    if degraded and resolution.save_html:
+        # Said out loud, because it is the difference between an archive
+        # that renders offline and a bare document whose styles and
+        # images live on a server that may not outlast the capture.
+        # Absence means the normal case: a single-file browser archive.
+        lines.append("artifact: fetch")
     if resolution.source:
         lines.extend(discussion_lines(discussions(resolution.source, title)))
     lines.append(f"capture_date: {date.today().isoformat()}")
