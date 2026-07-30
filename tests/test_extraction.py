@@ -499,6 +499,60 @@ def test_github_blob_markdown(monkeypatch):
     assert module.github_markdown("https://github.com/o/r/issues/5") is None
 
 
+def test_github_blob_reads_the_sources_own_frontmatter(monkeypatch):
+    # claytonwramsey/www: content/blog/fiddler-const-magic.md has no
+    # date in its path, and the repo's first commit for it is the 2025
+    # date the site moved in — two years after publication. The file
+    # says so itself, in Zola's TOML fence.
+    import capture.resolvers as module
+    import capture.resolvers.base as base
+
+    source = (
+        '+++\ntitle = "Blowing up my compile times for dubious benefits"\n'
+        'date = 2023-06-19\ntemplate = "post.html"\n+++\n\nThe tree of useless'
+        " optimization yields questionable fruit.\n"
+    )
+    monkeypatch.setattr(base, "fetch_html", lambda u: source)
+    gh = module.github_markdown(
+        "https://github.com/claytonwramsey/www/blob/master/content/blog/x.md"
+    )
+    assert gh is not None
+    assert gh["publish"] == "2023-06-19"
+    assert gh["title"] == "Blowing up my compile times for dubious benefits"
+    # The fence is metadata, not prose: it must not survive into the body
+    assert "+++" not in gh["markdown"]
+    assert gh["markdown"].startswith("The tree of useless")
+
+
+def test_github_blob_reads_jekyll_yaml_frontmatter(monkeypatch):
+    import capture.resolvers as module
+    import capture.resolvers.base as base
+
+    source = '---\nlayout: post\ntitle: "A Jekyll Post"\ndate: 2019-04-02 10:00\n---\n\nBody.\n'
+    monkeypatch.setattr(base, "fetch_html", lambda u: source)
+    gh = module.github_markdown("https://github.com/o/r/blob/main/_posts/x.md")
+    assert gh is not None
+    assert gh["publish"] == "2019-04-02"
+    assert gh["title"] == "A Jekyll Post"
+    assert gh["markdown"].strip() == "Body."
+
+
+def test_github_blob_without_frontmatter_is_unchanged(monkeypatch):
+    # A plain README must keep behaving as before: path date, then the
+    # file's first commit.
+    import capture.resolvers as module
+    import capture.resolvers.base as base
+    import capture.resolvers.github as github
+
+    monkeypatch.setattr(base, "fetch_html", lambda u: "# Title\n\nBody.")
+    monkeypatch.setattr(github, "first_commit_date", lambda o, r, p: "2024-01-02")
+    gh = module.github_markdown("https://github.com/o/r/blob/main/README.md")
+    assert gh is not None
+    assert gh["publish"] == "2024-01-02"
+    assert gh["title"] is None  # falls through to the body heading
+    assert gh["markdown"] == "# Title\n\nBody."
+
+
 def test_github_markdown_degrades_when_the_api_fails(monkeypatch):
     # api.github.com answers 502 for gists/8627fe00 while the gist page
     # and its raw content serve fine. Returning None sends the URL to

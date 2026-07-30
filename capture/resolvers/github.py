@@ -28,8 +28,39 @@ def resolve_github(url: str) -> Resolution | None:
         html=base.fetch_html(url),
         publish=gh["publish"],
         markdown=gh["markdown"],
-        title=markdown_heading(gh["markdown"]) or gh["name"],
+        # An explicit frontmatter title beats a guess from the body or
+        # the file name.
+        title=gh.get("title") or markdown_heading(gh["markdown"]) or gh["name"],
     )
+
+
+def source_frontmatter(text: str) -> tuple[dict[str, str], str]:
+    """A static-site source file's own metadata, and the body without it.
+
+    Zola and Hugo fence TOML in `+++`, Jekyll fences YAML in `---`, and
+    the block holds the title and date the author wrote. Neither the
+    file name nor git history is a substitute: claytonwramsey/www stores
+    "Blowing up my compile times for dubious benefits" of 2023-06-19 in
+    content/blog/fiddler-const-magic.md, whose first commit is the 2025
+    date the site moved into that repo.
+    """
+    fences = {"+++": r"^\+\+\+\s*$", "---": r"^---\s*$"}
+    for opener, pattern in fences.items():
+        if not text.startswith(opener):
+            continue
+        end = re.search(pattern, text[len(opener) :], re.M)
+        if not end:
+            return {}, text
+        block = text[len(opener) : len(opener) + end.start()]
+        body = text[len(opener) + end.end() :].lstrip("\n")
+        fields = {}
+        for line in block.splitlines():
+            key, sep, value = line.partition("=" if opener == "+++" else ":")
+            if not sep:
+                continue
+            fields[key.strip().lower()] = value.strip().strip('"').strip("'")
+        return fields, body
+    return {}, text
 
 
 def markdown_heading(markdown: str) -> str | None:
@@ -158,16 +189,23 @@ def github_markdown(url: str) -> dict | None:
             lambda m: m.group(1) + urljoin(raw_url, m.group(2)),
             text,
         )
+        # The author's own metadata outranks the path and git history,
+        # and its fence is not part of the prose.
+        fields, text = source_frontmatter(text)
         publish = None
-        if match := re.search(r"/(\d{4})/(\d{1,2})/(\d{1,2})/", f"/{path}"):
-            year, month, day = (int(g) for g in match.groups())
-            if 1 <= month <= 12 and 1 <= day <= 31:
-                publish = f"{year}-{month:02d}-{day:02d}"
+        if stamp := re.match(r"(\d{4}-\d{2}-\d{2})", fields.get("date", "")):
+            publish = stamp.group(1)
+        if not publish:
+            if match := re.search(r"/(\d{4})/(\d{1,2})/(\d{1,2})/", f"/{path}"):
+                year, month, day = (int(g) for g in match.groups())
+                if 1 <= month <= 12 and 1 <= day <= 31:
+                    publish = f"{year}-{month:02d}-{day:02d}"
         if not publish:
             publish = first_commit_date(owner, repo, path)
         return {
             "markdown": text,
             "publish": publish,
+            "title": fields.get("title"),
             "name": Path(path).stem,
             "domain": f"github.com - {owner}",
         }
