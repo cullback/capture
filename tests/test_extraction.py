@@ -701,6 +701,70 @@ def test_substack_comment_count_falls_back_to_the_tree():
     assert "## Comments (2)" in render_comments(nested)
 
 
+def test_lobsters_story_url_forms():
+    from capture.resolvers import lobsters_story
+
+    for url in [
+        "https://lobste.rs/s/e8abqn/how_can_one_write_blazing_fast_yet_useful",
+        "https://lobste.rs/s/e8abqn",
+        "https://lobste.rs/s/e8abqn.json",
+    ]:
+        assert lobsters_story(url) == "e8abqn"
+    assert lobsters_story("https://lobste.rs/") is None
+    assert lobsters_story("https://news.ycombinator.com/item?id=1") is None
+
+
+def test_lobsters_markdown_nests_by_depth():
+    from capture.resolvers import lobsters_markdown
+
+    # Lobsters ships a flat list with an explicit 0-based depth, unlike
+    # Hacker News where the nesting has to be rebuilt from children.
+    story = {
+        "title": "How can one write blazing fast yet useful compilers",
+        "url": "",
+        "submitter_user": "tromp",
+        "created_at": "2025-06-07T12:46:55.000-05:00",
+        "score": 40,
+        "comment_count": 3,
+        "description": '<p>Body of an <a href="https://x.example">Ask</a>.</p>',
+        "comments": [
+            {
+                "commenting_user": "rtfeldman",
+                "depth": 0,
+                "score": 12,
+                "created_at": "2025-06-07T13:00:00.000-05:00",
+                "comment": "<p>Roc creator here!</p>",
+            },
+            {
+                "commenting_user": "replier",
+                "depth": 1,
+                "score": 0,
+                "created_at": "2025-06-08T09:00:00.000-05:00",
+                "comment": "<p>A <em>nested</em> reply.</p>",
+            },
+            {
+                "commenting_user": "ghost",
+                "depth": 0,
+                "is_deleted": True,
+                "comment": "<p>gone</p>",
+            },
+        ],
+    }
+    out = lobsters_markdown(story)
+    assert "# How can one write blazing fast yet useful compilers" in out
+    assert "Submitted by tromp on 2025-06-07 — 40 points" in out
+    # A text post keeps its body in `description`, converted
+    assert "Body of an [Ask](https://x.example)." in out
+    assert "## Comments (3)" in out
+    assert "> **rtfeldman** (2025-06-07, 12 points)" in out
+    assert "> > **replier** (2025-06-08)" in out
+    assert "> > A *nested* reply." in out
+    assert "gone" not in out  # deleted comments contribute nothing
+    # A link post announces what it discusses
+    linked = dict(story, url="https://example.com/post", comments=[])
+    assert "Discussion of <https://example.com/post>" in lobsters_markdown(linked)
+
+
 def test_reddit_thread_url_forms():
     from capture.resolvers import reddit_thread
 

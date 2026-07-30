@@ -31,6 +31,11 @@ from capture.resolvers.reddit import (
     resolve_reddit,
 )
 from capture.resolvers.lesswrong import lesswrong_post, resolve_lesswrong
+from capture.resolvers.lobsters import (
+    lobsters_markdown,
+    lobsters_story,
+    resolve_lobsters,
+)
 from capture.resolvers.pdf import resolve_pdf
 from capture.resolvers.wayback import (
     resolve_wayback,
@@ -45,6 +50,7 @@ RESOLVERS = [
     resolve_github,
     resolve_youtube,
     resolve_hackernews,
+    resolve_lobsters,
     resolve_reddit,
     resolve_wayback,
     resolve_lesswrong,
@@ -83,7 +89,10 @@ __all__ = [
     "lesswrong_post",
     "resolve_github",
     "resolve_hackernews",
+    "lobsters_markdown",
+    "lobsters_story",
     "resolve_lesswrong",
+    "resolve_lobsters",
     "resolve_pdf",
     "render_comments",
     "resolve_reddit",
