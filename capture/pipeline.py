@@ -68,11 +68,13 @@ def capture(
         "www."
     )
 
-    # single-file archives to a temp path outside the destination, since the
-    # folder name may depend on metadata that only exists after
-    # rendering. Some sites stall headless chromium's navigation forever
-    # (jaykmody.com) while serving plain fetches fine: degrade to the
-    # raw HTML as artifact.
+    # single-file archives to a temp path outside the destination, since
+    # the folder name may depend on metadata that only exists after
+    # rendering. When the browser cannot deliver — it has stalled on a
+    # site's navigation before — degrade to the raw HTML as artifact and
+    # say so in the frontmatter, since such failures have proven
+    # temporary: jaykmody.com stalled long enough to earn a mention here
+    # and now archives in five seconds.
     artifact_html = resolution.html
     # Whether the .html is a plain fetch rather than a browser archive:
     # true for archive.today, which the resolvers deliberately curl, and
