@@ -22,7 +22,8 @@ def main() -> None:
         "examples:\n"
         "  capture https://example.com/post -o ~/notes\n"
         "  capture https://example.com/post -o ~/notes --corpus ~/archive\n"
-        "  capture ./paper.pdf --origin https://publisher.example/paper",
+        "  capture ./paper.pdf --origin https://publisher.example/paper\n"
+        "  capture https://arxiv.org/abs/2512.25070 --long-pdf   # 48 pages",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument("url", help="page URL, or a local PDF path to ingest")
@@ -56,7 +57,16 @@ def main() -> None:
         help="main archive directory; captures already there are copied to"
         " the destination instead of re-scraped",
     )
+    parser.add_argument(
+        "--long-pdf",
+        action="store_true",
+        help="convert a PDF past the 30-page limit (Datalab bills per page)",
+    )
     args = parser.parse_args()
+    if args.long_pdf:
+        from capture.resolvers import pdf
+
+        pdf.LONG_PDF = True
     destination = (args.output or Path.cwd()).resolve()
     lookup = args.origin or args.url
     if not args.force and (duplicate := existing_capture(lookup, destination)):

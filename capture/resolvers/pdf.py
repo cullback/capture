@@ -121,6 +121,13 @@ def pdf_info(pdf: Path) -> dict:
     return info
 
 
+# pdf2md refuses PDFs over 30 pages, since Datalab bills per page. The
+# CLI sets this when the caller has decided a long paper is worth it.
+# A module flag rather than a parameter because resolve() dispatches
+# every resolver through one (url) -> Resolution|None signature.
+LONG_PDF = False
+
+
 def child_env() -> dict[str, str]:
     """`sys.executable -m capture.pdf2md` needs to find the package it
     came from. The nix wrapper exports PATH but not PYTHONPATH, so the
@@ -146,6 +153,7 @@ def pdf_markdown(pdf: Path) -> tuple[str, Path | None]:
             str(out),
             "--media-dir",
             "media",
+            *(["--override"] if LONG_PDF else []),
             str(pdf),
         ],
         capture_output=True,
