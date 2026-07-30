@@ -89,14 +89,22 @@ def capture(
         raise RuntimeError(f"every fetcher failed for {url}")
     if resolution.markdown is None and challenge_page(artifact_html):
         # Bot checks served with HTTP 200 (steamdb) dodge the status
-        # check; nothing real was fetched. The Wayback Machine may hold
-        # a real copy from a luckier crawl (dl.acm.org PDFs): recapture
-        # through the newest snapshot, which keeps the original URL's
-        # identity for naming, frontmatter, and dedup.
-        if snapshot := wayback_fallback(url):
+        # check; nothing real was fetched.
+        if resolution.html and not challenge_page(resolution.html):
+            # Only the browser was challenged: randomascii.wordpress.com
+            # hands curl the whole article and chromium an interstitial.
+            # Keep the copy we can actually read.
+            print("browser got a bot check; archiving the plain fetch instead")
+            artifact_html = resolution.html
+        elif snapshot := wayback_fallback(url):
+            # The Wayback Machine may hold a real copy from a luckier
+            # crawl (dl.acm.org PDFs): recapture through the newest
+            # snapshot, which keeps the original URL's identity for
+            # naming, frontmatter, and dedup.
             print(f"bot check defeated the archive; capturing {snapshot}")
             return capture(snapshot, destination=destination)
-        raise RuntimeError(f"bot-check interstitial instead of content for {url}")
+        else:
+            raise RuntimeError(f"bot-check interstitial instead of content for {url}")
 
     # Client-rendered pages (e.g. AoPS, Obsidian Publish) serve a shell:
     # take metadata from the rendered DOM when the raw HTML carries no
