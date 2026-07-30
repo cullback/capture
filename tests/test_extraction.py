@@ -499,6 +499,50 @@ def test_github_blob_markdown(monkeypatch):
     assert module.github_markdown("https://github.com/o/r/issues/5") is None
 
 
+def test_repo_readme_falls_back_past_markdown(monkeypatch):
+    # nkaz001/hftbacktest and riley-martine/inappropriate-notifications
+    # both ship README.rst, and looking only for README.md left their
+    # captures at four words ("# owner/repo  (no README)").
+    import capture.resolvers.base as base
+    import capture.resolvers.github as github
+
+    def only_rst(url: str, retry: bool = True) -> str:
+        if url.endswith("README.rst"):
+            return "Title\n=====\n\nSome *emphasis*.\n"
+        raise base.FetchError(404, url)
+
+    monkeypatch.setattr(base, "fetch_html", only_rst)
+    url, readme = github.repo_readme("nkaz001", "hftbacktest", "master")
+    assert url.endswith("README.rst")
+    # pandoc reads reStructuredText: the heading and emphasis convert
+    assert "# Title" in readme and "*emphasis*" in readme
+
+    # A repo with no README at all still reports nothing found
+    monkeypatch.setattr(
+        base,
+        "fetch_html",
+        lambda u, retry=True: (_ for _ in ()).throw(base.FetchError(404, u)),
+    )
+    assert github.repo_readme("o", "r", "main") == ("", "")
+
+
+def test_repo_readme_prefers_markdown_untouched(monkeypatch):
+    import capture.resolvers.base as base
+    import capture.resolvers.github as github
+
+    calls = []
+
+    def serve(url: str, retry: bool = True) -> str:
+        calls.append(url)
+        return "# Straight markdown\n"
+
+    monkeypatch.setattr(base, "fetch_html", serve)
+    url, readme = github.repo_readme("o", "r", "main")
+    # README.md is tried first and returned verbatim, no pandoc involved
+    assert url.endswith("README.md") and len(calls) == 1
+    assert readme == "# Straight markdown\n"
+
+
 def test_github_blob_reads_the_sources_own_frontmatter(monkeypatch):
     # claytonwramsey/www: content/blog/fiddler-const-magic.md has no
     # date in its path, and the repo's first commit for it is the 2025

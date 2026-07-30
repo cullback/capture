@@ -109,16 +109,15 @@ def resolve_repo(owner: str, repo: str) -> Resolution:
     source = f"https://github.com/{owner}/{repo}"
     meta = json.loads(base.fetch_html(f"https://api.github.com/repos/{owner}/{repo}"))
     branch = meta.get("default_branch", "main")
-    readme_url = f"https://raw.githubusercontent.com/{owner}/{repo}/{branch}/README.md"
-    try:
-        readme = base.fetch_html(readme_url)
+    readme_url, readme = repo_readme(owner, repo, branch)
+    if readme_url:
         # Rebase relative image links onto the raw host.
         readme = re.sub(
             r"(!\[[^\]]*\]\()(?!https?://|#|data:)([^)\s]+)",
             lambda m: m.group(1) + urljoin(readme_url, m.group(2)),
             readme,
         )
-    except base.FetchError:
+    else:
         readme = f"# {owner}/{repo}\n\n(no README)\n"
     extra = {"description": meta.get("description") or ""}
     if language := meta.get("language"):
@@ -136,6 +135,44 @@ def resolve_repo(owner: str, repo: str) -> Resolution:
         extra=extra,
         download_media=lambda folder, name: bundle_repo(source, folder, name),
     )
+
+
+# A README need not be markdown, and only the first two of these are
+# markdown when found. nkaz001/hftbacktest (4.3k stars) and
+# riley-martine/inappropriate-notifications both ship README.rst, and
+# looking only for README.md left their captures four words long.
+README_NAMES = {
+    "README.md": None,
+    "README.markdown": None,
+    "README.rst": "rst",
+    "README.txt": None,
+    "README.org": "org",
+    "README": None,
+    "readme.md": None,
+}
+
+
+def repo_readme(owner: str, repo: str, branch: str) -> tuple[str, str]:
+    """The repo's README as markdown, and the URL it came from.
+
+    Non-markdown ones go through pandoc, which reads reStructuredText
+    and org-mode directly. Returns ("", "") when the repo has none.
+    """
+    for name, source_format in README_NAMES.items():
+        url = f"https://raw.githubusercontent.com/{owner}/{repo}/{branch}/{name}"
+        try:
+            text = base.fetch_html(url)
+        except base.FetchError:
+            continue
+        if source_format:
+            converted = base.to_markdown(text, source_format)
+            if not converted.strip():
+                # Conversion failed; the raw file still beats nothing.
+                print(f"{name}: pandoc conversion failed, keeping the source")
+                return url, text
+            return url, converted
+        return url, text
+    return "", ""
 
 
 def bundle_repo(source: str, folder: Path, name: str) -> None:

@@ -64,6 +64,20 @@ def fetch_html(url: str, retry: bool = True) -> str:
     return body
 
 
+def to_markdown(text: str, source_format: str) -> str:
+    """Convert a non-markdown source to markdown, for the sources that
+    hand over a file rather than a page — a README.rst, say. Separate
+    from pipeline.pandoc, which converts a whole capture and cannot be
+    imported here without a cycle."""
+    result = subprocess.run(
+        ["pandoc", "-f", source_format, "-t", "gfm-raw_html", "--wrap=none"],
+        input=text,
+        capture_output=True,
+        text=True,
+    )
+    return result.stdout if result.returncode == 0 else ""
+
+
 class FetchError(RuntimeError):
     def __init__(self, status: int, url: str):
         super().__init__(f"HTTP {status} for {url}")
