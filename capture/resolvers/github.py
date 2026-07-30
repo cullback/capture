@@ -136,6 +136,11 @@ def github_markdown(url: str) -> dict | None:
 
     These files ARE markdown: fetching the raw source beats converting
     GitHub's rendered chrome back into markdown.
+
+    Returns None when the shortcut is unavailable, which sends the URL
+    to the default resolver rather than failing the capture: the gists
+    API answers 502 for karpathy/8627fe00 while the gist itself serves
+    fine, and a page we can archive beats an error we cannot.
     """
     blob = re.search(
         r"github\.com/([^/]+)/([^/]+)/blob/([^/]+)/(.+\.(?:md|markdown))$", url, re.I
@@ -143,7 +148,10 @@ def github_markdown(url: str) -> dict | None:
     if blob:
         owner, repo, ref, path = blob.groups()
         raw_url = f"https://raw.githubusercontent.com/{owner}/{repo}/{ref}/{path}"
-        text = base.fetch_html(raw_url)
+        try:
+            text = base.fetch_html(raw_url)
+        except base.FetchError:
+            return None
         # Rebase relative image links onto the raw host.
         text = re.sub(
             r"(!\[[^\]]*\]\()(?!https?://|#|data:)([^)\s]+)",
@@ -166,7 +174,10 @@ def github_markdown(url: str) -> dict | None:
     gist = re.search(r"gist\.github\.com/([^/]+)/([a-f0-9]+)", url)
     if gist:
         user, gist_id = gist.groups()
-        api = json.loads(base.fetch_html(f"https://api.github.com/gists/{gist_id}"))
+        try:
+            api = json.loads(base.fetch_html(f"https://api.github.com/gists/{gist_id}"))
+        except (base.FetchError, ValueError):
+            return None
         for filename, info in api.get("files", {}).items():
             if filename.lower().endswith((".md", ".markdown")):
                 return {

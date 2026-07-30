@@ -499,6 +499,26 @@ def test_github_blob_markdown(monkeypatch):
     assert module.github_markdown("https://github.com/o/r/issues/5") is None
 
 
+def test_github_markdown_degrades_when_the_api_fails(monkeypatch):
+    # api.github.com answers 502 for gists/8627fe00 while the gist page
+    # and its raw content serve fine. Returning None sends the URL to
+    # the default resolver; raising would fail the whole capture.
+    import capture.resolvers as module
+    import capture.resolvers.base as base
+
+    def refuse(url: str, retry: bool = True) -> str:
+        raise base.FetchError(502, url)
+
+    monkeypatch.setattr(base, "fetch_html", refuse)
+    assert (
+        module.github_markdown(
+            "https://gist.github.com/karpathy/8627fe009c40f57531cb18360106ce95"
+        )
+        is None
+    )
+    assert module.github_markdown("https://github.com/o/r/blob/main/x.md") is None
+
+
 def test_github_wiki_page(monkeypatch):
     import capture.resolvers.base as base
     import capture.resolvers.github as github
