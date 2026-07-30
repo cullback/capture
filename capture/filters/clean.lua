@@ -14,9 +14,44 @@ function Span(el)
   end
 end
 
+-- A GFM pipe table row is one line of inlines, so a cell holding block
+-- content or a hard line break makes the whole table unrepresentable
+-- and the gfm writer emits the literal text "[TABLE]" instead — losing
+-- it entirely. unixwiz.net's x86 jump reference is nothing but such a
+-- table (3 Divs and 35 LineBreaks across its cells), and 129 tables in
+-- 49 captures went the same way.
+--
+-- Flatten each cell to a single line of inlines. Links and emphasis
+-- survive; the internal structure of a cell does not, which is the
+-- price of having the table at all.
+local function flatten_cell(cell)
+  local blocks = pandoc.Blocks(cell.contents):walk({
+    -- Unwrap block wrappers so blocks_to_inlines sees leaf blocks.
+    -- Nested tables are deliberately left alone: pandoc walks
+    -- bottom-up, so an inner table has already been normalized into a
+    -- representable one by the time its parent is visited. Rendering it
+    -- as flattened text instead lost 350 words on Benford's law and ran
+    -- navbox links together ("BenfordBernoulliBeta-binomial").
+    Div = function(el) return el.content end,
+    BlockQuote = function(el) return el.content end,
+  })
+  local inlines = pandoc.Inlines(
+    pandoc.utils.blocks_to_inlines(blocks, { pandoc.Space() })
+  ):walk({
+    -- A newline would end the row early.
+    LineBreak = function() return pandoc.Space() end,
+    SoftBreak = function() return pandoc.Space() end,
+  })
+  cell.contents = { pandoc.Plain(inlines) }
+  -- Merged cells have no pipe-table spelling. Keep the content in one
+  -- cell and let the row run short; the writer pads it.
+  cell.row_span = 1
+  cell.col_span = 1
+  return cell
+end
+
 -- A table with exactly one cell is a layout wrapper (1990s centering
--- tables, e.g. xkcd.com/solution.html): unwrap it, since the gfm
--- writer would collapse block content in tables to "[TABLE]".
+-- tables, e.g. xkcd.com/solution.html): unwrap it.
 function Table(el)
   local cells = {}
   local function collect(rows)
@@ -35,6 +70,10 @@ function Table(el)
   if #cells == 1 then
     return cells[1].contents
   end
+  for _, cell in ipairs(cells) do
+    flatten_cell(cell)
+  end
+  return el
 end
 
 -- Pandoc writes code blocks as indented markdown unless they carry a
