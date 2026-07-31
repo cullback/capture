@@ -140,14 +140,17 @@ and fish. For development, the devShell (`nix develop` or direnv) provides
 the same set; outside either, the browser archive fails and captures degrade
 to the plain curl fetch.
 
-The pipeline's helper scripts ship inside the package:
+`capture` is the only installed command. The pipeline's helper scripts ship
+inside the package and are invoked from it, not from your PATH:
 
 - `capture/scripts/single-file-archive` — SingleFile plus the hardened
   chromium flags that pass Cloudflare's headless detection. The flags live
   there canonically.
-- `pdf2md` (also installed as its own command) — PDF-to-markdown via the
+- `capture/pdf2md.py` — PDF-to-markdown via the
   [Datalab Marker API](https://www.datalab.to/), reading the key from
-  `DATALAB_API_KEY` or `~/.config/datalab/key`.
+  `DATALAB_API_KEY` or `~/.config/datalab/key`. Run it alone with
+  `python -m capture.pdf2md` for batch or `--mode fast` conversion without an
+  archive folder.
 
 Optional: Netscape-format cookies at `~/.config/capture/youtube-cookies.txt`
 for age-restricted or member-only videos.

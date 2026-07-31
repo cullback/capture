@@ -38,17 +38,11 @@
           src = self;
           pyproject = true;
           build-system = [ pkgs.python312Packages.hatchling ];
-          nativeBuildInputs = [ pkgs.makeWrapper ];
           makeWrapperArgs = [
             "--prefix PATH : ${pkgs.lib.makeBinPath runtime}"
           ];
-          # The fish helper ships as package data (wheels drop execute
-          # bits), so expose it as a command via its own wrapper.
-          postInstall = ''
-            makeWrapper ${pkgs.fish}/bin/fish $out/bin/single-file-archive \
-              --add-flags "$out/${pkgs.python312.sitePackages}/capture/scripts/single-file-archive" \
-              --prefix PATH : ${pkgs.lib.makeBinPath runtime}
-          '';
+          # The fish helper stays package data, invoked by path from
+          # pipeline.single_file: `capture` is the one installed command.
         };
 
         apps.default = {

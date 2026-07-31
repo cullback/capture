@@ -1,7 +1,7 @@
 """Direct PDF URLs: the PDF is the canonical artifact.
 
-Metadata comes from pdfinfo; markdown comes from the dotfiles pdf2md
-script (Datalab Marker API), a hard dependency.
+Metadata comes from pdfinfo; markdown comes from the packaged
+capture.pdf2md module (Datalab Marker API), a hard dependency.
 """
 
 import os

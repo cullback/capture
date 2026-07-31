@@ -1,8 +1,14 @@
 """Convert PDFs to markdown via the Datalab Marker API.
 
-Usage: pdf2md [-o DIR] [--name STEM] [--media-dir NAME]
-              [--mode fast|balanced|accurate] [--override]
-              <file.pdf> [more.pdf ...]
+The conversion step behind the pdf resolver, not a user-facing
+command: `capture <file.pdf>` is the supported way in, so that every
+billed conversion lands in the archive and dedup can spare you the
+second one. Reachable directly for batch or fast-mode work the CLI
+does not expose:
+
+    python -m capture.pdf2md [-o DIR] [--name STEM] [--media-dir NAME]
+                             [--mode fast|balanced|accurate] [--override]
+                             <file.pdf> [more.pdf ...]
 
 Writes <stem>.md (plus a media directory when the document has
 figures) into the output directory, printing each markdown path to

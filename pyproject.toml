@@ -8,7 +8,6 @@ dependencies = []
 
 [project.scripts]
 capture = "capture.__main__:main"
-pdf2md = "capture.pdf2md:main"
 
 [build-system]
 requires = ["hatchling"]
