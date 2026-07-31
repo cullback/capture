@@ -14,7 +14,8 @@ def main() -> None:
         description="Save a URL or local PDF as a self-contained archive folder:\n"
         "the content in its most faithful form (single-file HTML for pages,\n"
         "the typeset PDF for papers, archival video for YouTube, a git bundle\n"
-        "for repos) plus a markdown conversion with YAML frontmatter.",
+        "for repos) plus a markdown conversion with YAML frontmatter.\n"
+        "Reddit threads and Wayback Machine snapshots are resolved automatically.",
         epilog="environment:\n"
         "  DATALAB_API_KEY  Datalab Marker key for PDF-to-markdown conversion\n"
         "                   (default: read from ~/.config/datalab/key)\n"
@@ -27,7 +28,11 @@ def main() -> None:
         "  capture ./paper.pdf --name tareen2019 --no-frontmatter -o studies/",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    parser.add_argument("url", help="page URL, or a local PDF path to ingest")
+    parser.add_argument(
+        "url",
+        help="URL (page, PDF, YouTube, git repo, reddit thread, or Wayback"
+        " snapshot) or a local PDF path to ingest",
+    )
     parser.add_argument(
         "-f",
         "--force",
