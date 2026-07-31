@@ -24,12 +24,29 @@ bernsteinbear.com - 2026-02-25 - a-fuzzer-for-the-toy-optimizer/
 ```
 
 The flake installs the `capture` command: `nix profile install .` from a
-checkout, or ad hoc `nix run . -- <url>`. Within this repo,
-`just capture <url>` passes `-o data/` to grow the resident corpus.
+checkout, or ad hoc `nix run . -- <url>`. The corpus lives at
+`/vault/media/sites`; capture into it with `-o /vault/media/sites`, or by
+running `capture <url>` from that directory.
 
 Folder names follow `<domain> - <date> - <slug>`, ASCII only. The date comes
 from the page's publish date and falls back to the capture date when no
 publish date exists.
+
+`--name` replaces that derivation, naming the folder and every file inside it,
+for callers that already have an identifier and need the output path up front:
+
+```
+$ capture ./paper.pdf --name tareen2019 --no-frontmatter -o studies/
+studies/tareen2019
+
+studies/tareen2019/
+├── tareen2019.pdf
+├── tareen2019.md
+└── media/
+```
+
+`--no-frontmatter` writes the markdown without the YAML block — for pipelines
+that read the body as text and take metadata from elsewhere.
 
 The `.html` file comes from [SingleFile](https://github.com/gildas-lormeau/single-file-cli)
 driven by headless chromium: one file with styles and images inlined, rendering

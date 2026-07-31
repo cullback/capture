@@ -23,7 +23,8 @@ def main() -> None:
         "  capture https://example.com/post -o ~/notes\n"
         "  capture https://example.com/post -o ~/notes --corpus ~/archive\n"
         "  capture ./paper.pdf --origin https://publisher.example/paper\n"
-        "  capture https://arxiv.org/abs/2512.25070 --long-pdf   # 48 pages",
+        "  capture https://arxiv.org/abs/2512.25070 --long-pdf   # 48 pages\n"
+        "  capture ./paper.pdf --name tareen2019 --no-frontmatter -o studies/",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument("url", help="page URL, or a local PDF path to ingest")
@@ -62,7 +63,21 @@ def main() -> None:
         action="store_true",
         help="convert a PDF past the 30-page limit (Datalab bills per page)",
     )
+    parser.add_argument(
+        "--name",
+        help="name the capture folder and the files inside it, instead of"
+        " deriving `<domain> - <date> - <slug>`; for callers that already have"
+        " an identifier and need the output path to be predictable",
+    )
+    parser.add_argument(
+        "--no-frontmatter",
+        dest="frontmatter",
+        action="store_false",
+        help="write the markdown without the YAML frontmatter block",
+    )
     args = parser.parse_args()
+    if args.name and (Path(args.name).name != args.name or args.name in {".", ".."}):
+        sys.exit("capture failed: --name must be a single path segment")
     if args.long_pdf:
         from capture.resolvers import pdf
 
@@ -75,9 +90,9 @@ def main() -> None:
         return
     try:
         if args.bookmark:
-            print(display_path(bookmark(args.url, args.origin, destination)))
+            print(display_path(bookmark(args.url, args.origin, destination, args.name)))
         elif folder := corpus_copy(lookup, destination, args.corpus, args.force) or (
-            capture(args.url, args.origin, destination)
+            capture(args.url, args.origin, destination, args.name, args.frontmatter)
         ):
             print(display_path(folder))
     except RuntimeError as error:

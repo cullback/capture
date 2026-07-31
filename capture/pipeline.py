@@ -52,7 +52,11 @@ PANDOC_FORMAT = "html+tex_math_dollars+tex_math_single_backslash"
 
 
 def capture(
-    url: str, origin: str | None = None, destination: Path | None = None
+    url: str,
+    origin: str | None = None,
+    destination: Path | None = None,
+    name_override: str | None = None,
+    write_frontmatter: bool = True,
 ) -> Path | None:
     target = Path(url)
     if target.is_file():
@@ -130,7 +134,7 @@ def capture(
     publish = resolution.publish or (
         None if resolution.dateless else published_date(resolution.source, meta_html)
     )
-    name = folder_name(
+    name = name_override or folder_name(
         domain, resolution.source, meta_html, title, publish, resolution.fallback_date
     )
     folder = (destination or Path.cwd()) / name
@@ -138,7 +142,14 @@ def capture(
     folder.mkdir(parents=True, exist_ok=True)
     try:
         return write_capture(
-            resolution, folder, name, artifact_html, title, publish, degraded
+            resolution,
+            folder,
+            name,
+            artifact_html,
+            title,
+            publish,
+            degraded,
+            write_frontmatter,
         )
     except BaseException:
         # A failed capture leaves nothing behind — but never delete a
@@ -164,7 +175,12 @@ def folder_name(
     return unicodedata.normalize("NFKD", name).encode("ascii", "ignore").decode()
 
 
-def bookmark(url: str, origin: str | None, destination: Path | None) -> Path:
+def bookmark(
+    url: str,
+    origin: str | None,
+    destination: Path | None,
+    name_override: str | None = None,
+) -> Path:
     """A lightweight capture: one plain fetch to name the folder well, then
     just a .url internet shortcut — no browser, media, or markdown. For
     pages worth recording in the corpus but not worth archiving in full."""
@@ -180,7 +196,7 @@ def bookmark(url: str, origin: str | None, destination: Path | None) -> Path:
         html = ""
     title = page_title(html, domain, source)
     publish = published_date(source, html) if html else None
-    name = folder_name(domain, source, html, title, publish)
+    name = name_override or folder_name(domain, source, html, title, publish)
     folder = (destination or Path.cwd()) / name
     folder.mkdir(parents=True, exist_ok=True)
     (folder / f"{name}.url").write_text(internet_shortcut(source))
@@ -201,6 +217,7 @@ def write_capture(
     title: str,
     publish: str | None,
     degraded: bool = False,
+    write_frontmatter: bool = True,
 ) -> Path:
     wrote_html = bool(artifact_html) and resolution.save_html
     if wrote_html:
@@ -262,7 +279,10 @@ def write_capture(
         # Content the page withholds from its own HTML — substack serves
         # two comments and lazy-loads the rest.
         body = body.rstrip("\n") + "\n" + resolution.markdown_suffix
-    markdown.write_text(frontmatter(resolution, title, publish, degraded) + body)
+    head = (
+        frontmatter(resolution, title, publish, degraded) if write_frontmatter else ""
+    )
+    markdown.write_text(head + body)
     format_markdown(markdown)
     return folder
 
