@@ -872,6 +872,48 @@ def test_reddit_markdown_nests_comments_by_score():
     md = reddit_markdown(post, comments)
     assert md.index("u/high") < md.index("u/low")  # score order
     assert "> > **u/kid** (2 points)\n> > reply" in md  # nested under b
+    assert "## Comments (3)" in md  # captured count, not the stale snapshot
+
+
+def test_reddit_markdown_embeds_link_post_media():
+    from capture.resolvers import reddit_markdown
+    from capture.resolvers.reddit import reddit_media
+
+    image = {"id": "p1", "url": "https://i.redd.it/abc.png", "post_hint": "image"}
+    image["selftext"] = "[removed]"  # early-snapshot sentinel, not a body
+    md = reddit_markdown(image, [])
+    assert "![](https://i.redd.it/abc.png)" in md
+    assert "[removed]" not in md
+
+    # An article link post keeps its target as a plain link.
+    article = {"id": "p1", "url": "https://example.com/piece", "post_hint": "link"}
+    assert reddit_media(article) == ["<https://example.com/piece>"]
+
+    # Self posts point their url at the permalink: nothing to embed.
+    self_post = {"id": "p1", "url": "https://www.reddit.com/r/t/p1", "is_self": True}
+    assert reddit_media(self_post) == []
+
+    # Galleries resolve items through media_metadata mime types, in
+    # gallery order, with captions preserved.
+    gallery = {
+        "id": "p1",
+        "url": "https://www.reddit.com/gallery/p1",
+        "gallery_data": {
+            "items": [
+                {"media_id": "img2", "caption": "the packed bag"},
+                {"media_id": "img1"},
+            ]
+        },
+        "media_metadata": {
+            "img1": {"e": "Image", "m": "image/png"},
+            "img2": {"e": "Image", "m": "image/jpg"},
+        },
+    }
+    assert reddit_media(gallery) == [
+        "![](https://i.redd.it/img2.jpg)",
+        "the packed bag",
+        "![](https://i.redd.it/img1.png)",
+    ]
 
 
 def test_extensionless_pdf_urls_sniffed_by_content(monkeypatch):
