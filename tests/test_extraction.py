@@ -631,6 +631,52 @@ def test_github_blob_without_frontmatter_is_unchanged(monkeypatch):
     assert gh["markdown"] == "# Title\n\nBody."
 
 
+def test_github_blob_source_file_is_fenced(monkeypatch):
+    # donno2048/snake: snake.asm is source code, not markdown — capture
+    # the raw file in a code fence instead of GitHub's rendered chrome.
+    import capture.resolvers as module
+    import capture.resolvers.base as base
+    import capture.resolvers.github as github
+
+    monkeypatch.setattr(base, "fetch_html", lambda u: "mov ax, 0x13\n")
+    monkeypatch.setattr(github, "first_commit_date", lambda o, r, p: "2021-02-01")
+    gh = module.github_markdown(
+        "https://github.com/donno2048/snake/blob/master/snake.asm"
+    )
+    assert gh is not None
+    assert gh["markdown"] == "```asm\nmov ax, 0x13\n```\n"
+    assert gh["publish"] == "2021-02-01"
+    assert gh["title"] == "snake.asm"
+
+
+def test_fenced_outruns_backticks_inside():
+    from capture.resolvers.github import fenced
+
+    assert fenced("a ```` b", "md").startswith("`````md\n")
+
+
+def test_gist_code_files_are_fenced(monkeypatch):
+    import capture.resolvers as module
+    import capture.resolvers.base as base
+    import json
+
+    api = {
+        "description": "Tiny snake",
+        "created_at": "2021-02-01T00:00:00Z",
+        "files": {
+            "snake.py": {"content": "print('hi')\n"},
+            "notes.md": {"content": "# Notes\n"},
+        },
+    }
+    monkeypatch.setattr(base, "fetch_html", lambda u: json.dumps(api))
+    gh = module.github_markdown("https://gist.github.com/donno2048/abc123def")
+    assert gh is not None
+    assert "## snake.py\n\n```py\nprint('hi')\n```" in gh["markdown"]
+    assert "# Notes" in gh["markdown"]
+    assert gh["title"] == "Tiny snake"
+    assert gh["publish"] == "2021-02-01"
+
+
 def test_github_markdown_degrades_when_the_api_fails(monkeypatch):
     # api.github.com answers 502 for gists/8627fe00 while the gist page
     # and its raw content serve fine. Returning None sends the URL to

@@ -34,6 +34,14 @@ def resolve_github(url: str) -> Resolution | None:
     )
 
 
+def fenced(text: str, language: str = "") -> str:
+    """The file as a markdown code block, fenced longer than any
+    backtick run inside it."""
+    runs = re.findall(r"`+", text)
+    ticks = "`" * max(3, max((len(r) for r in runs), default=0) + 1)
+    return f"{ticks}{language}\n{text.rstrip()}\n{ticks}\n"
+
+
 def rebase_images(markdown: str, base_url: str) -> str:
     """Rebase relative image links onto the raw host."""
     return re.sub(
@@ -209,17 +217,16 @@ def bundle_repo(source: str, folder: Path, name: str) -> None:
 def github_markdown(url: str) -> dict | None:
     """Raw markdown and metadata for GitHub blob and gist URLs.
 
-    These files ARE markdown: fetching the raw source beats converting
-    GitHub's rendered chrome back into markdown.
+    The raw file beats converting GitHub's rendered chrome back into
+    markdown: markdown files come through verbatim, any other source
+    file becomes a fenced code block.
 
     Returns None when the shortcut is unavailable, which sends the URL
     to the default resolver rather than failing the capture: the gists
     API answers 502 for karpathy/8627fe00 while the gist itself serves
     fine, and a page we can archive beats an error we cannot.
     """
-    blob = re.search(
-        r"github\.com/([^/]+)/([^/]+)/blob/([^/]+)/(.+\.(?:md|markdown))$", url, re.I
-    )
+    blob = re.search(r"github\.com/([^/]+)/([^/]+)/blob/([^/]+)/([^?#]+)", url)
     if blob:
         owner, repo, ref, path = blob.groups()
         raw_url = f"https://raw.githubusercontent.com/{owner}/{repo}/{ref}/{path}"
@@ -227,6 +234,17 @@ def github_markdown(url: str) -> dict | None:
             text = base.fetch_html(raw_url)
         except base.FetchError:
             return None
+        if not re.search(r"\.(?:md|markdown)$", path, re.I):
+            if "\x00" in text or "�" in text:
+                # Binary; the rendered page archive beats fenced noise.
+                return None
+            return {
+                "markdown": fenced(text, Path(path).suffix.lstrip(".").lower()),
+                "publish": first_commit_date(owner, repo, path),
+                "title": Path(path).name,
+                "name": Path(path).name,
+                "domain": f"github.com - {owner}",
+            }
         text = rebase_images(text, raw_url)
         # The author's own metadata outranks the path and git history,
         # and its fence is not part of the prose.
@@ -255,14 +273,32 @@ def github_markdown(url: str) -> dict | None:
             api = json.loads(base.fetch_html(f"https://api.github.com/gists/{gist_id}"))
         except (base.FetchError, ValueError):
             return None
+        # Markdown files come through verbatim, code files as fenced
+        # blocks under their file name; binaries (no inline content)
+        # are skipped.
+        parts, first = [], ""
         for filename, info in api.get("files", {}).items():
+            content = info.get("content") or ""
+            if not content or "\x00" in content:
+                continue
+            first = first or filename
             if filename.lower().endswith((".md", ".markdown")):
-                return {
-                    "markdown": info["content"],
-                    "publish": (api.get("created_at") or "")[:10] or None,
-                    "name": Path(filename).stem,
-                    "domain": f"gist.github.com - {user}",
-                }
+                parts.append(content)
+            else:
+                parts.append(
+                    f"## {filename}\n\n"
+                    + fenced(content, Path(filename).suffix.lstrip(".").lower())
+                )
+        if parts:
+            return {
+                "markdown": "\n\n".join(parts),
+                "publish": (api.get("created_at") or "")[:10] or None,
+                # The description is the author's own label for the gist;
+                # file names are fallbacks.
+                "title": api.get("description") or None,
+                "name": Path(first).stem,
+                "domain": f"gist.github.com - {user}",
+            }
     return None
 
 
