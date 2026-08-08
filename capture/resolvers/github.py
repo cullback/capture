@@ -34,6 +34,15 @@ def resolve_github(url: str) -> Resolution | None:
     )
 
 
+def rebase_images(markdown: str, base_url: str) -> str:
+    """Rebase relative image links onto the raw host."""
+    return re.sub(
+        r"(!\[[^\]]*\]\()(?!https?://|#|data:)([^)\s]+)",
+        lambda m: m.group(1) + urljoin(base_url, m.group(2)),
+        markdown,
+    )
+
+
 def source_frontmatter(text: str) -> tuple[dict[str, str], str]:
     """A static-site source file's own metadata, and the body without it.
 
@@ -109,14 +118,11 @@ def resolve_repo(owner: str, repo: str) -> Resolution:
     source = f"https://github.com/{owner}/{repo}"
     meta = json.loads(base.fetch_html(f"https://api.github.com/repos/{owner}/{repo}"))
     branch = meta.get("default_branch", "main")
-    readme_url, readme = repo_readme(owner, repo, branch)
+    readme_url, readme = repo_readme(
+        f"https://raw.githubusercontent.com/{owner}/{repo}/{branch}"
+    )
     if readme_url:
-        # Rebase relative image links onto the raw host.
-        readme = re.sub(
-            r"(!\[[^\]]*\]\()(?!https?://|#|data:)([^)\s]+)",
-            lambda m: m.group(1) + urljoin(readme_url, m.group(2)),
-            readme,
-        )
+        readme = rebase_images(readme, readme_url)
     else:
         readme = f"# {owner}/{repo}\n\n(no README)\n"
     extra = {"description": meta.get("description") or ""}
@@ -152,14 +158,15 @@ README_NAMES = {
 }
 
 
-def repo_readme(owner: str, repo: str, branch: str) -> tuple[str, str]:
-    """The repo's README as markdown, and the URL it came from.
+def repo_readme(raw_base: str) -> tuple[str, str]:
+    """The repo's README as markdown, and the URL it came from, tried
+    against the raw-file URL prefix for the repo's default branch.
 
     Non-markdown ones go through pandoc, which reads reStructuredText
     and org-mode directly. Returns ("", "") when the repo has none.
     """
     for name, source_format in README_NAMES.items():
-        url = f"https://raw.githubusercontent.com/{owner}/{repo}/{branch}/{name}"
+        url = f"{raw_base}/{name}"
         try:
             text = base.fetch_html(url)
         except base.FetchError:
@@ -220,12 +227,7 @@ def github_markdown(url: str) -> dict | None:
             text = base.fetch_html(raw_url)
         except base.FetchError:
             return None
-        # Rebase relative image links onto the raw host.
-        text = re.sub(
-            r"(!\[[^\]]*\]\()(?!https?://|#|data:)([^)\s]+)",
-            lambda m: m.group(1) + urljoin(raw_url, m.group(2)),
-            text,
-        )
+        text = rebase_images(text, raw_url)
         # The author's own metadata outranks the path and git history,
         # and its fence is not part of the prose.
         fields, text = source_frontmatter(text)
@@ -289,12 +291,8 @@ def github_wiki(url: str) -> dict | None:
     # `?` in a page name ("What-Is-Similarity?") would start a query string.
     raw_url = f"https://raw.githubusercontent.com/wiki/{owner}/{repo}/{quote(page)}.md"
     text = base.fetch_html(raw_url)
-    # Rebase relative links (wiki uploads live at the wiki repo root).
-    text = re.sub(
-        r"(!\[[^\]]*\]\()(?!https?://|#|data:)([^)\s]+)",
-        lambda m: m.group(1) + urljoin(raw_url, m.group(2)),
-        text,
-    )
+    # Wiki uploads live at the wiki repo root.
+    text = rebase_images(text, raw_url)
     return {
         "markdown": text,
         "publish": wiki_first_commit(owner, repo, f"{page}.md"),

@@ -14,6 +14,7 @@ from capture.resolvers.default import (
     path_identity_domain,
     resolve_default,
 )
+from capture.resolvers.codeberg import codeberg_repo, resolve_codeberg
 from capture.resolvers.github import github_markdown, github_wiki, resolve_github
 from capture.resolvers.hackernews import (
     hackernews_item,
@@ -48,6 +49,7 @@ from capture.resolvers.youtube import resolve_youtube, youtube_id
 RESOLVERS = [
     resolve_arxiv,
     resolve_github,
+    resolve_codeberg,
     resolve_youtube,
     resolve_hackernews,
     resolve_lobsters,
@@ -87,6 +89,8 @@ __all__ = [
     "resolve_arxiv",
     "resolve_default",
     "lesswrong_post",
+    "codeberg_repo",
+    "resolve_codeberg",
     "resolve_github",
     "resolve_hackernews",
     "lobsters_markdown",

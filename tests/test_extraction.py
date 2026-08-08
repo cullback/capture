@@ -544,7 +544,9 @@ def test_repo_readme_falls_back_past_markdown(monkeypatch):
         raise base.FetchError(404, url)
 
     monkeypatch.setattr(base, "fetch_html", only_rst)
-    url, readme = github.repo_readme("nkaz001", "hftbacktest", "master")
+    url, readme = github.repo_readme(
+        "https://raw.githubusercontent.com/nkaz001/hftbacktest/master"
+    )
     assert url.endswith("README.rst")
     # pandoc reads reStructuredText: the heading and emphasis convert
     assert "# Title" in readme and "*emphasis*" in readme
@@ -555,7 +557,7 @@ def test_repo_readme_falls_back_past_markdown(monkeypatch):
         "fetch_html",
         lambda u, retry=True: (_ for _ in ()).throw(base.FetchError(404, u)),
     )
-    assert github.repo_readme("o", "r", "main") == ("", "")
+    assert github.repo_readme("https://raw.githubusercontent.com/o/r/main") == ("", "")
 
 
 def test_repo_readme_prefers_markdown_untouched(monkeypatch):
@@ -569,7 +571,7 @@ def test_repo_readme_prefers_markdown_untouched(monkeypatch):
         return "# Straight markdown\n"
 
     monkeypatch.setattr(base, "fetch_html", serve)
-    url, readme = github.repo_readme("o", "r", "main")
+    url, readme = github.repo_readme("https://raw.githubusercontent.com/o/r/main")
     # README.md is tried first and returned verbatim, no pandoc involved
     assert url.endswith("README.md") and len(calls) == 1
     assert readme == "# Straight markdown\n"
@@ -1308,6 +1310,17 @@ def test_normalize_ignores_www_scheme_and_trailing_slash():
     assert normalize("https://www.example.com/a/b/") == normalize(
         "http://example.com/a/b"
     )
+
+
+def test_codeberg_repo_matches_root_only():
+    from capture.resolvers import codeberg_repo
+
+    assert codeberg_repo(
+        "https://codeberg.org/NunoSempere/2024-election-modelling"
+    ) == ("NunoSempere", "2024-election-modelling")
+    assert codeberg_repo("https://codeberg.org/owner/repo.git") == ("owner", "repo")
+    assert codeberg_repo("https://codeberg.org/owner/repo/issues") is None
+    assert codeberg_repo("https://codeberg.org/explore/repos") is None
 
 
 def test_canonical_url_desktops_mobile_wikipedia():
