@@ -5,6 +5,7 @@ import shutil
 import sys
 from pathlib import Path
 
+from capture.extract import canonical_url
 from capture.pipeline import bookmark, capture, existing_capture
 
 
@@ -88,6 +89,8 @@ def main() -> None:
 
         pdf.LONG_PDF = True
     destination = (args.output or Path.cwd()).resolve()
+    args.url = canonical_url(args.url)
+    args.origin = canonical_url(args.origin) if args.origin else None
     lookup = args.origin or args.url
     if not args.force and (duplicate := existing_capture(lookup, destination)):
         print(f"already captured: {duplicate.name}")
@@ -95,7 +98,11 @@ def main() -> None:
         return
     try:
         if args.bookmark:
-            print(display_path(bookmark(args.url, args.origin, destination, args.name)))
+            print(
+                display_path(
+                    bookmark(args.url, args.origin, destination, args.name, args.force)
+                )
+            )
         elif folder := corpus_copy(lookup, destination, args.corpus, args.force) or (
             capture(args.url, args.origin, destination, args.name, args.frontmatter)
         ):

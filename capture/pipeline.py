@@ -180,6 +180,7 @@ def bookmark(
     origin: str | None,
     destination: Path | None,
     name_override: str | None = None,
+    force: bool = False,
 ) -> Path:
     """A lightweight capture: one plain fetch to name the folder well, then
     just a .url internet shortcut — no browser, media, or markdown. For
@@ -197,7 +198,14 @@ def bookmark(
     title = page_title(html, domain, source)
     publish = published_date(source, html) if html else None
     name = name_override or folder_name(domain, source, html, title, publish)
-    folder = (destination or Path.cwd()) / name
+    root = destination or Path.cwd()
+    if not force and (duplicate := existing_page(root, name)):
+        # URL dedup ran before the fetch, but the same page can live at
+        # several URLs with no redirect between them; the derived name
+        # catches those. Keep the original capture.
+        print("already captured; pass -f / --force to bookmark anyway")
+        return duplicate
+    folder = root / name
     folder.mkdir(parents=True, exist_ok=True)
     (folder / f"{name}.url").write_text(internet_shortcut(source))
     return folder
@@ -434,6 +442,22 @@ def format_markdown(markdown: Path) -> None:
     )
     if result.returncode == 0 and result.stdout:
         markdown.write_text(result.stdout)
+
+
+def existing_page(root: Path, name: str) -> Path | None:
+    """The folder already holding this page under another date: domain
+    and slug identify a page even when the URL that reached it differs
+    (moved paths, alternate routes with no redirect between them)."""
+
+    def undated(folder: str) -> str:
+        return re.sub(r"\d{4}-\d{2}-\d{2}", "", folder, count=1)
+
+    if not root.is_dir():
+        return None
+    for entry in sorted(root.iterdir()):
+        if entry.is_dir() and undated(entry.name) == undated(name):
+            return entry
+    return None
 
 
 def existing_capture(url: str, root: Path | None = None) -> Path | None:

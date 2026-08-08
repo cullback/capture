@@ -1310,6 +1310,45 @@ def test_normalize_ignores_www_scheme_and_trailing_slash():
     )
 
 
+def test_canonical_url_desktops_mobile_wikipedia():
+    from capture.extract import canonical_url
+
+    assert (
+        canonical_url("https://en.m.wikipedia.org/wiki/Lenna")
+        == "https://en.wikipedia.org/wiki/Lenna"
+    )
+    assert (
+        canonical_url("https://en.wikipedia.org/wiki/Lenna")
+        == "https://en.wikipedia.org/wiki/Lenna"
+    )
+    assert (
+        canonical_url("https://example.com/m.wikipedia.org/")
+        == "https://example.com/m.wikipedia.org/"
+    )
+
+
+def test_existing_page_matches_same_slug_across_dates(tmp_path):
+    # cannoneyed.com: /isometric-nyc/ and /projects/isometric-nyc serve
+    # the same page with no redirect; only the derived name matches.
+    import capture.pipeline as module
+
+    folder = tmp_path / "data" / "cannoneyed.com - 2026-07-13 - isometric-nyc"
+    folder.mkdir(parents=True)
+    assert (
+        module.existing_page(
+            tmp_path / "data", "cannoneyed.com - 2026-08-08 - isometric-nyc"
+        )
+        == folder
+    )
+    assert (
+        module.existing_page(
+            tmp_path / "data", "cannoneyed.com - 2026-08-08 - other-page"
+        )
+        is None
+    )
+    assert module.existing_page(tmp_path / "missing", "x - 2026-08-08 - y") is None
+
+
 def test_existing_capture_matches_frontmatter_url(tmp_path):
     import capture.pipeline as module
 

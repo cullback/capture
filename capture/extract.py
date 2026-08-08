@@ -295,6 +295,13 @@ def paywalled(html: str) -> bool:
     return bool(re.search(r'audience\\?":\\?"only_paid', html))
 
 
+def canonical_url(url: str) -> str:
+    """The desktop URL for links that arrive in an aliased mobile form
+    (en.m.wikipedia.org -> en.wikipedia.org), so the capture, its
+    frontmatter, and dedup all see one identity per article."""
+    return re.sub(r"(//[a-z-]+)\.m\.wikipedia\.org/", r"\1.wikipedia.org/", url)
+
+
 def normalize(url: str) -> str:
     parsed = urlparse(url)
     base = parsed.netloc.removeprefix("www.") + parsed.path.rstrip("/")
