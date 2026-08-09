@@ -12,7 +12,9 @@ alias fmt := format
 format:
     dprint fmt
     fd -e nix | xargs -r nixfmt
-    rg -l '[^\n]\z' --multiline | xargs -r sed -i -e '$a\\'
+    # The trailing `.` is required: with no path, ripgrep reads stdin when
+    # stdin is not a TTY and blocks forever instead of searching the tree.
+    rg -l '[^\n]\z' --multiline . | xargs -r sed -i -e '$a\\'
 
 # Run linters and static analysis
 check:
@@ -20,7 +22,7 @@ check:
     ruff check .
     pyright .
     fd -e nix | xargs -r nixfmt --check
-    ! rg -l '[^\n]\z' --multiline
+    ! rg -l '[^\n]\z' --multiline .
 
 # Run the test suite
 test:
