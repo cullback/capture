@@ -37,6 +37,7 @@ from capture.resolvers.lobsters import (
     lobsters_story,
     resolve_lobsters,
 )
+from capture.resolvers.pastebin import pastebin_key, resolve_pastebin
 from capture.resolvers.pdf import resolve_pdf
 from capture.resolvers.wayback import (
     resolve_wayback,
@@ -50,6 +51,7 @@ RESOLVERS = [
     resolve_arxiv,
     resolve_github,
     resolve_codeberg,
+    resolve_pastebin,
     resolve_youtube,
     resolve_hackernews,
     resolve_lobsters,
@@ -81,6 +83,7 @@ __all__ = [
     "hackernews_item",
     "hackernews_markdown",
     "original_url",
+    "pastebin_key",
     "path_identity_domain",
     "reddit_comments",
     "reddit_markdown",
@@ -97,6 +100,7 @@ __all__ = [
     "lobsters_story",
     "resolve_lesswrong",
     "resolve_lobsters",
+    "resolve_pastebin",
     "resolve_pdf",
     "render_comments",
     "resolve_reddit",

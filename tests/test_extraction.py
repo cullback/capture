@@ -1437,3 +1437,88 @@ def test_existing_capture_resolves_arxiv_forms(tmp_path):
         module.existing_capture("https://arxiv.org/pdf/2603.21852v2", tmp_path / "data")
         == folder
     )
+
+
+def test_pastebin_key_forms():
+    from capture.resolvers import pastebin_key
+
+    assert pastebin_key("https://pastebin.com/VLq4CpCT") == "VLq4CpCT"
+    assert pastebin_key("https://www.pastebin.com/VLq4CpCT") == "VLq4CpCT"
+    assert pastebin_key("https://pastebin.com/raw/XuV4H9Zd") == "XuV4H9Zd"
+    assert pastebin_key("https://pastebin.com/dl/XuV4H9Zd") == "XuV4H9Zd"
+    # Site routes shaped like a key, profile pages, and non-key paths.
+    assert pastebin_key("https://pastebin.com/trending") is None
+    assert pastebin_key("https://pastebin.com/u/Visarga") is None
+    assert pastebin_key("https://pastebin.com/archive/text") is None
+    # A snapshot of a paste belongs to the wayback resolver.
+    assert (
+        pastebin_key("https://web.archive.org/web/2024/https://pastebin.com/VLq4CpCT")
+        is None
+    )
+
+
+# The info block of pastebin.com/VLq4CpCT, as served 2026-08-09.
+PASTEBIN_PAGE = """
+<div class="info-top">
+    <h1>Mind Map for Coding Agents</h1>
+</div>
+<div class="info-bottom">
+    <div class="username">
+        <a href="/u/Visarga">Visarga</a>
+    </div>
+    <div class="date">
+        <span title="Tuesday 4th of November 2025 11:21:02 PM CDT">Nov 4th, 2025</span>
+    </div>
+</div>
+<a href="/archive/text" class="btn -small h_800">text</a>
+"""
+
+
+def test_pastebin_fences_text_paste(monkeypatch):
+    import capture.resolvers.base as base
+    import capture.resolvers as module
+
+    fetched = {
+        "https://pastebin.com/VLq4CpCT": PASTEBIN_PAGE,
+        "https://pastebin.com/raw/VLq4CpCT": "# Mind Map\n\nnodes and links",
+    }
+    monkeypatch.setattr(base, "fetch_html", lambda u: fetched[u])
+    resolution = module.resolve_pastebin("https://pastebin.com/VLq4CpCT")
+    assert resolution is not None
+    assert resolution.title == "Mind Map for Coding Agents"
+    assert resolution.domain == "pastebin.com - Visarga"
+    assert resolution.publish == "2025-11-04"
+    # Declared format is text, so the body is a fenced block, unlabeled.
+    assert (resolution.markdown or "").startswith("```\n# Mind Map")
+
+
+def test_pastebin_markdown_title_passes_through(monkeypatch):
+    # pastebin.com/XuV4H9Zd: format "text", but the author titled it
+    # PROJECT_MIND_MAPPING.md — the name declares markdown.
+    import capture.resolvers.base as base
+    import capture.resolvers as module
+
+    page = PASTEBIN_PAGE.replace(
+        "Mind Map for Coding Agents", "PROJECT_MIND_MAPPING.md"
+    )
+    fetched = {
+        "https://pastebin.com/XuV4H9Zd": page,
+        "https://pastebin.com/raw/XuV4H9Zd": "# Mind Mapping\n\nprose",
+    }
+    monkeypatch.setattr(base, "fetch_html", lambda u: fetched[u])
+    resolution = module.resolve_pastebin("https://pastebin.com/XuV4H9Zd")
+    assert resolution is not None
+    assert resolution.markdown == "# Mind Mapping\n\nprose\n"
+
+
+def test_pastebin_guest_paste_keeps_bare_domain(monkeypatch):
+    import capture.resolvers.base as base
+    import capture.resolvers as module
+
+    page = PASTEBIN_PAGE.replace('<a href="/u/Visarga">Visarga</a>', "a guest")
+    monkeypatch.setattr(
+        base, "fetch_html", lambda u: page if "raw" not in u else "code"
+    )
+    resolution = module.resolve_pastebin("https://pastebin.com/AbCd1234")
+    assert resolution is not None
+    assert resolution.domain == "pastebin.com"
