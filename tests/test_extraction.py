@@ -1522,3 +1522,20 @@ def test_pastebin_guest_paste_keeps_bare_domain(monkeypatch):
     resolution = module.resolve_pastebin("https://pastebin.com/AbCd1234")
     assert resolution is not None
     assert resolution.domain == "pastebin.com"
+
+
+def test_title_pagefind_meta_h1_beats_masthead_h1():
+    # dotat.at: no og:title, the first h1 is the masthead, and the post
+    # h1 declares itself via pagefind and prefixes the title with the
+    # post date.
+    html = (
+        "<title>Counting the days, revisited &ndash; Tony Finch</title>"
+        '<h1><img src="/dotat-64.png" alt=".@"> Tony Finch &ndash; blog</h1>'
+        '<h1 data-pagefind-meta="title">'
+        '<a href="https://dotat.at/@/2026-08-09-rata-die.html">'
+        "2026-08-09 &ndash; Counting the days, revisited</a></h1>"
+    )
+    assert (
+        page_title(html, "dotat.at", "https://dotat.at/@/2026-08-09-rata-die.html")
+        == "Counting the days, revisited"
+    )

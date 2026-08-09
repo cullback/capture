@@ -119,12 +119,15 @@ def page_title(html: str, domain: str = "", url: str = "") -> str:
     headings = re.findall(r"<h([12])([^>]*)>(.*?)</h\1>", html, re.S)
     # A class-marked heading is the strongest heading signal: WordPress
     # puts a site-title h1 earlier in the DOM, and Obsidian Publish uses
-    # an h2 (publish-article-heading) with no h1 at all.
+    # an h2 (publish-article-heading) with no h1 at all. Pagefind's
+    # data-pagefind-meta="title" is the same declaration made explicit
+    # (dotat.at, whose first h1 is the masthead).
     classed = next(
         (
             clean(body)
             for _, attrs, body in headings
             if re.search(r"(entry|post|article|page|publish)[-_](title|heading)", attrs)
+            or re.search(r"""data-pagefind-meta=["']title["']""", attrs)
         ),
         "",
     )
@@ -158,8 +161,9 @@ def page_title(html: str, domain: str = "", url: str = "") -> str:
     scores: dict[str, float] = {}
 
     def add(text: str, score: float) -> None:
-        # Some themes nest a date element inside the heading (mazzo.li).
-        text = re.sub(r"^\d{4}-\d{2}-\d{2}\s+", "", text)
+        # Some themes nest a date element inside the heading (mazzo.li),
+        # or prefix the title with one ("2026-08-09 – …", dotat.at).
+        text = re.sub(r"^\d{4}-\d{2}-\d{2}(?:\s*[–—-]\s*|\s+)", "", text)
         for name in site_names:
             text = strip_site_name(text, name)
         text = strip_site_suffix(text, domain)
