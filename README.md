@@ -133,10 +133,6 @@ already captured: bernsteinbear.com - 2026-02-25 - a-fuzzer-for-the-toy-optimize
 pass -f / --force to re-capture
 ```
 
-When `--corpus` points at a main archive (this repo's `data/`),
-capturing to some other destination copies an existing capture from the
-corpus instead of scraping the site again.
-
 ## Failure behavior
 
 A failed capture leaves nothing at the destination. The pipeline skips paywalled

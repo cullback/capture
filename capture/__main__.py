@@ -1,7 +1,6 @@
 """CLI entry point: capture a web page into a destination folder."""
 
 import argparse
-import shutil
 import sys
 from pathlib import Path
 
@@ -23,7 +22,6 @@ def main() -> None:
         "\n"
         "examples:\n"
         "  capture https://example.com/post -o ~/notes\n"
-        "  capture https://example.com/post -o ~/notes --corpus ~/archive\n"
         "  capture ./paper.pdf --origin https://publisher.example/paper\n"
         "  capture https://arxiv.org/abs/2512.25070 --long-pdf   # 48 pages\n"
         "  capture ./paper.pdf --name tareen2019 --no-frontmatter -o studies/",
@@ -57,12 +55,6 @@ def main() -> None:
         type=Path,
         help="destination directory for the capture folder"
         " (default: current directory)",
-    )
-    parser.add_argument(
-        "--corpus",
-        type=Path,
-        help="main archive directory; captures already there are copied to"
-        " the destination instead of re-scraped",
     )
     parser.add_argument(
         "--long-pdf",
@@ -103,28 +95,12 @@ def main() -> None:
                     bookmark(args.url, args.origin, destination, args.name, args.force)
                 )
             )
-        elif folder := corpus_copy(lookup, destination, args.corpus, args.force) or (
-            capture(args.url, args.origin, destination, args.name, args.frontmatter)
+        elif folder := capture(
+            args.url, args.origin, destination, args.name, args.frontmatter
         ):
             print(display_path(folder))
     except RuntimeError as error:
         sys.exit(f"capture failed: {error}")
-
-
-def corpus_copy(
-    lookup: str, destination: Path, corpus: Path | None, force: bool
-) -> Path | None:
-    """The capture already in the --corpus archive, copied to the
-    destination rather than scraped from the site again."""
-    if force or not corpus or corpus.resolve() == destination:
-        return None
-    if existing := existing_capture(lookup, corpus):
-        folder = Path(
-            shutil.copytree(existing, destination / existing.name, dirs_exist_ok=True)
-        )
-        print(f"copied from corpus: {existing.name}")
-        return folder
-    return None
 
 
 def display_path(folder: Path) -> str:
