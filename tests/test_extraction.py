@@ -444,6 +444,67 @@ def test_youtube_id_from_url_forms():
     assert youtube_id("https://www.youtube.com/@somechannel") is None
 
 
+def test_vimeo_id_from_url_forms():
+    from capture.resolvers import vimeo_id
+
+    for url in [
+        "https://vimeo.com/715262741",
+        "https://www.vimeo.com/715262741",
+        "https://vimeo.com/715262741/a1b2c3d4e5",
+        "https://vimeo.com/channels/staffpicks/715262741",
+        "https://vimeo.com/groups/shortfilms/videos/715262741",
+        "https://vimeo.com/album/12345/video/715262741",
+        "https://player.vimeo.com/video/715262741",
+    ]:
+        assert vimeo_id(url) == "715262741"
+    assert vimeo_id("https://vimeo.com/conneromalley") is None
+    # A wayback snapshot of a vimeo page belongs to the wayback resolver.
+    assert vimeo_id("https://web.archive.org/web/2020/https://vimeo.com/1") is None
+
+
+def test_vimeo_player_carries_the_unlisted_link_hash():
+    from capture.resolvers.vimeo import vimeo_player
+
+    assert vimeo_player("https://vimeo.com/715262741") == (
+        "https://player.vimeo.com/video/715262741"
+    )
+    assert vimeo_player("https://vimeo.com/715262741/a1b2c3d4e5") == (
+        "https://player.vimeo.com/video/715262741?h=a1b2c3d4e5"
+    )
+    assert vimeo_player("https://player.vimeo.com/video/715262741?h=a1b2c3d4e5") == (
+        "https://player.vimeo.com/video/715262741?h=a1b2c3d4e5"
+    )
+    assert vimeo_player("https://youtu.be/jNQXAC9IVRw") is None
+
+
+def test_vimeo_oembed_supplies_what_the_player_endpoint_omits(monkeypatch):
+    from capture.extract import slugify
+    from capture.resolvers import base, vimeo
+
+    fetched = []
+
+    def fake_fetch(url, retry=True):
+        fetched.append(url)
+        return (
+            '{"author_name": "Conner O\'Malley", "upload_date": "2022-05-30 11:07:24"}'
+        )
+
+    monkeypatch.setattr(base, "fetch_html", fake_fetch)
+    record = vimeo.vimeo_oembed("https://vimeo.com/715262741/a1b2c3d4e5")
+    assert vimeo.vimeo_upload_date(record) == "2022-05-30"
+    assert slugify(record["author_name"]) == "conner-omalley"
+    # The shared URL goes to oEmbed verbatim, so unlisted hashes survive.
+    assert "https%3A%2F%2Fvimeo.com%2F715262741%2Fa1b2c3d4e5" in fetched[0]
+
+    def refuse(url, retry=True):
+        raise base.FetchError(404, url)
+
+    monkeypatch.setattr(base, "fetch_html", refuse)
+    assert vimeo.vimeo_oembed("https://vimeo.com/715262741") == {}
+    # A record without a date dates nothing, rather than the epoch.
+    assert vimeo.vimeo_upload_date({}) is None
+
+
 def test_existing_capture_resolves_youtube_forms(tmp_path):
     import capture.pipeline as module
 

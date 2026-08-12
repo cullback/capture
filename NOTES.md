@@ -311,6 +311,40 @@ HTML. A bot-checked page with no lucky snapshot still fails; the
 remaining outs are a manual download (`--origin`) or, if it ever earns
 its dependency, zendriver.
 
+## vimeo.com (a broken extractor routed around, at a cost)
+
+yt-dlp 2026.07.04 cannot read a canonical vimeo page at all: every
+`vimeo.com/<id>` fails with `Failed to fetch macos OAuth token: HTTP
+Error 401`, the video id makes no difference. The embed player at
+`player.vimeo.com/video/<id>` needs no such token and works, so the
+resolver downloads from there and keeps `vimeo.com/<id>` as the
+capture's identity.
+
+The workaround costs metadata. The player endpoint serves no
+`timestamp`, and so no `upload_date` — also no description or counts,
+which video captures do not use. Without a date the folder would take
+the capture date and claim a 2022 video was published today, so the
+publish date comes from vimeo's oEmbed API instead: public, no key,
+and it accepts the shared URL verbatim, hash included.
+
+oEmbed also names the uploader, which is why the folder groups by
+`vimeo.com - conner-omalley` rather than the account id the player
+reports. Vimeo has no @handle convention, and only accounts with a
+vanity URL identify themselves readably at all — the rest are
+`user11107993`. Display names change, so a rename splits an uploader's
+folders; that was chosen deliberately, legibility over stability.
+
+Not every video is reachable this way. An uploader can restrict
+off-site embedding, and `player.vimeo.com` then answers 401 to
+everyone — `--referer https://vimeo.com/` and `?app_id=` both fail to
+move it, while oEmbed still returns the metadata. The resolver names
+that case in its error rather than reporting a generic yt-dlp failure,
+and does not fall back to archiving the page: vimeo's HTML is an empty
+11KB shell, so a "successful" capture there would hold nothing.
+
+If the vimeo.com extractor is ever fixed upstream, the player route
+keeps working, but the reason for it in `vimeo_player` goes stale.
+
 ## Current fetcher matrix
 
 | Fetcher                  | Runs JS | Fingerprint                    | Role                                  |

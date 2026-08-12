@@ -39,6 +39,7 @@ from capture.resolvers import (
     path_identity_domain,
     reddit_thread,
     resolve,
+    vimeo_id,
     wayback_fallback,
     wayback_snapshot,
     youtube_id,
@@ -463,7 +464,7 @@ def existing_page(root: Path, name: str) -> Path | None:
 def existing_capture(url: str, root: Path | None = None) -> Path | None:
     """The folder already holding this URL, matched via frontmatter."""
     root = root or Path.cwd()
-    if vid := youtube_id(url):
+    if vid := (youtube_id(url) or vimeo_id(url)):
         # Video captures have no markdown; match the id in info.json.
         for info in sorted(root.glob("*/*.info.json")):
             if f'"id": "{vid}"' in info.read_text(errors="replace"):
